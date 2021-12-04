@@ -281,6 +281,7 @@ namespace chess::SearchAgents{
 		Polyglot book;
 	public:
 		uint64_t nodes = 0;
+		uint64_t twofold = 0;
 		uint64_t threefold = 0;
 		uint64_t mates = 0;
 		uint64_t draws = 0;
@@ -288,9 +289,10 @@ namespace chess::SearchAgents{
 		UCI::Limits limits;
 		std::stringstream logFile;
 		bool twoFoldEnabled = true;
+		bool threeFoldEnabled = true;
 		
 		std::vector<std::vector<Move>> moves;
-		/*
+		
 		template<class EvalAgent>
 		int search(chess::ClassicBitBoard& board, Move& bestmove, Move& ponder) {
 			limits.startSearch(board.side);
@@ -366,6 +368,12 @@ namespace chess::SearchAgents{
 			//Check if root node is 2 fold repetition. If root is already a 2 fold repetition => disable repetition check
 			if (board.isTwoFold()) {
 				this->twoFoldEnabled = false;
+				if (board.isThreeFold()) {
+					this->threeFoldEnabled = false;
+				}
+				else {
+					this->threeFoldEnabled = true;
+				}
 			}
 			else {
 				this->twoFoldEnabled = true;
@@ -379,36 +387,23 @@ namespace chess::SearchAgents{
 			limits.nextItt();
 			Move searchMove = bestmove; //no empty move!
 			int searchValue;
-			int finalDepth = 0;
-			for (int depth = 0; !limits.exeeded(depth); depth++) {
-				if (depth == moves.size()) moves.resize((size_t)(moves.size() * 1.5) + 1);
+			
+			if (limits.depth == moves.size()) moves.resize((size_t)(moves.size() * 1.5) + 1);
 
-				int alpha = INT_MIN;
-				int beta = INT_MAX;
-				if (board.side) {
-					searchValue = alphabeta<EvalAgent, true>(board, depth, alpha, beta, searchMove);
-				}
-				else {
-					searchValue = alphabeta<EvalAgent, false>(board, depth, alpha, beta, searchMove);
-				}
-				if (limits.exeededTime()) {
-					// alpha beta search was terminated prematurly => results not complete
-					break;
-				}
-				bestmove = searchMove;
-				value = searchValue;
-				finalDepth = depth;
-
-				limits.nextItt();
-
-				std::cout << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestmove << " " << ponder << std::endl;
-				this->logFile << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestmove << " " << ponder << std::endl;
+			int alpha = INT_MIN;
+			int beta = INT_MAX;
+			if (board.side) {
+				searchValue = alphabeta<EvalAgent, true>(board, limits.depth, alpha, beta, bestmove);
 			}
+			else {
+				searchValue = alphabeta<EvalAgent, false>(board, limits.depth, alpha, beta, bestmove);
+			}
+
 			long long unsigned nps = this->nodes;
 			if (limits.getElapsed() != 0) {
 				nps = this->nodes * 1e3 / limits.getElapsed();
 			}
-			std::cout << "info depth " << finalDepth
+			std::cout << "info depth " << limits.depth
 				<< " nodes " << this->nodes
 				<< " nps " << nps
 				<< " mates " << this->mates
@@ -416,7 +411,7 @@ namespace chess::SearchAgents{
 				<< " score cp " << value
 				<< " time " << limits.getElapsed()
 				<< std::endl;
-			this->logFile << "info depth " << finalDepth
+			this->logFile << "info depth " << limits.depth
 				<< " nodes " << this->nodes
 				<< " nps " << nps
 				<< " mates " << this->mates
@@ -426,7 +421,8 @@ namespace chess::SearchAgents{
 				<< std::endl;
 			return value;
 		}
-		*/
+		
+
 		template<class EvalAgent, bool side>
 		int alphabeta(chess::ClassicBitBoard& brd, int depth, Move& best) {
 			nodes = 0;
@@ -871,7 +867,7 @@ namespace chess::SearchAgents{
 			}
 			long long unsigned nps = this->nodes;
 			if (limits.getElapsed() != 0) {
-				nps = this->nodes * 1e3 / (uint64_t)limits.getElapsed();
+				nps = (uint64_t)(this->nodes * 1e3 / limits.getElapsed());
 			}
 			std::cout << "info depth " << finalDepth
 				<< " nodes " << this->nodes
