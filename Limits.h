@@ -5,9 +5,9 @@ namespace UCI {
 	class Limits
 	{
 	private:
-		long maxSearchTime=-1;
-		long lastItt=-1;
-		unsigned long elapsed = 0;
+		long long maxSearchTime=-1;
+		long long lastItt=-1;
+		long long elapsed = 0;
 		std::chrono::steady_clock::time_point startItt = std::chrono::steady_clock::now();
 	public:
 		int depth = -1;
@@ -20,9 +20,9 @@ namespace UCI {
 
 		Limits();
 		void setDefault();
-		unsigned long getElapsed();
-		unsigned long elapsedSinceStart();
-		unsigned long elapsedMicrosecondsSinceStart();
+		long long getElapsed();
+		long long elapsedSinceStart();
+		long long elapsedMicrosecondsSinceStart();
 		void startSearch(bool side);
 		void nextItt();
 		bool exeeded(int depth);

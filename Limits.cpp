@@ -20,15 +20,15 @@ void UCI::Limits::setDefault()
 
 }
 
-unsigned long UCI::Limits::getElapsed()
+long long UCI::Limits::getElapsed()
 {
 	this->elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 	return this->elapsed;
 }
-unsigned long UCI::Limits::elapsedSinceStart() {
+long long UCI::Limits::elapsedSinceStart() {
 	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 }
-unsigned long UCI::Limits::elapsedMicrosecondsSinceStart() {
+long long UCI::Limits::elapsedMicrosecondsSinceStart() {
 	return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - startTime).count();
 }
 void UCI::Limits::startSearch(bool side)

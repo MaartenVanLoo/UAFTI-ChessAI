@@ -871,7 +871,7 @@ namespace chess::SearchAgents{
 			}
 			long long unsigned nps = this->nodes;
 			if (limits.getElapsed() != 0) {
-				nps = this->nodes * 1e3 / limits.getElapsed();
+				nps = this->nodes * 1e3 / (uint64_t)limits.getElapsed();
 			}
 			std::cout << "info depth " << finalDepth
 				<< " nodes " << this->nodes
