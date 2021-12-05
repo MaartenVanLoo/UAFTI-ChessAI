@@ -1045,7 +1045,6 @@ namespace chess::SearchAgents{
 
 			int in_alpha = alpha;
 			int in_beta = beta;
-			bool isPV = true; // is principle variation.
 
 			if (side) {
 				int bestValue = INT_MIN;
@@ -1069,14 +1068,18 @@ namespace chess::SearchAgents{
 						bestValue = value;
 					}
 					if (value >= beta) {
-						isPV = false;
-						TTtable.update(key, this->searchID, TTtype::CUT, value, depth, best);
 						break;
 					}
 					alpha = std::max(alpha, value);
 				}
-				if (value > in_alpha && value < in_beta && isPV) {
+				if (value > in_alpha && value < in_beta) {
 					TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
+				}
+				else if (value >= in_beta) {
+					TTtable.update(key, this->searchID, TTtype::CUT, value, depth, best);
+				}
+				else if (value <= in_alpha) {
+					TTtable.update(key, this->searchID, TTtype::ALL, value, depth, best);
 				}
 				return value;
 			}
@@ -1102,14 +1105,20 @@ namespace chess::SearchAgents{
 						bestValue = value;
 					}
 					if (value <= alpha) {
-						isPV = false;
-						TTtable.update(key, this->searchID, TTtype::ALL, value, depth, best);
 						break;
 					}
 					beta = std::min(beta, value);
 				}
-				if (value > in_alpha && value < in_beta && isPV) {
+				if (value > in_alpha && value < in_beta) {
 					TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
+				}
+				else if (value >= in_beta) {
+					//note: 'black to move' = minimizing => upper bound = all node
+					TTtable.update(key, this->searchID, TTtype::ALL, value, depth, best);
+				}
+				else if (value <= in_alpha) {
+					//note: 'black to move' = minimizing => lower bound = cut node
+					TTtable.update(key, this->searchID, TTtype::CUT, value, depth, best);
 				}
 				return value;
 			}
