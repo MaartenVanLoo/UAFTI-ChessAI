@@ -76,6 +76,6 @@ bool UCI::Limits::exeeded(int depth)
 }
 bool UCI::Limits::exeededTime() {
 	elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
-	if (elapsed >= this->maxSearchTime) return true;
+	if (elapsed >= this->maxSearchTime && this->maxSearchTime != -1) return true;
 	return false;
 }
