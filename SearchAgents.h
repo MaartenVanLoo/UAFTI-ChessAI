@@ -841,7 +841,7 @@ namespace chess::SearchAgents{
 			int finalDepth = 0;
 			for (int depth = 0; !limits.exeeded(depth); depth++) {
 				if (depth == moves.size()) moves.resize((size_t)(moves.size() * 1.5) + 1);
-				this->searchID++;
+                this->searchID++;
 
 				int alpha = INT_MIN;
 				int beta = INT_MAX;
@@ -968,7 +968,11 @@ namespace chess::SearchAgents{
 			//}
 			//auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - this->startTime).count();
 			//if (elapsed > this->limitTime && this->limitTime > 0) return 0;
-			if (this->limits.exeededTime()) return 0;
+
+            //if time limit is exceeded cause the parent node to "CUT".
+            //return "0" could cause undefined behavior (might be better compared to actual value)
+            if (this->limits.exeededTime()) return side?INT_MAX:INT_MIN;
+
 			//probe transposition table
 			uint64_t key = ClassicBitBoard::HashUtil::createHash(brd);
 			//bool tablehit = TTtable.get(key, entry, depth);
