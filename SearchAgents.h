@@ -841,7 +841,7 @@ namespace chess::SearchAgents{
 			int finalDepth = 0;
 			for (int depth = 0; !limits.exeeded(depth); depth++) {
 				if (depth == moves.size()) moves.resize((size_t)(moves.size() * 1.5) + 1);
-				this->searchID++;
+                this->searchID++;
 
 				int alpha = INT_MIN;
 				int beta = INT_MAX;
@@ -968,7 +968,11 @@ namespace chess::SearchAgents{
 			//}
 			//auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - this->startTime).count();
 			//if (elapsed > this->limitTime && this->limitTime > 0) return 0;
-			if (this->limits.exeededTime()) return 0;
+
+            //if time limit is exceeded cause the parent node to "CUT".
+            //return "0" could cause undefined behavior (might be better compared to actual value)
+            if (this->limits.exeededTime()) return side?INT_MAX:INT_MIN;
+
 			//probe transposition table
 			uint64_t key = ClassicBitBoard::HashUtil::createHash(brd);
 			//bool tablehit = TTtable.get(key, entry, depth);
@@ -1045,7 +1049,6 @@ namespace chess::SearchAgents{
 
 			int in_alpha = alpha;
 			int in_beta = beta;
-			bool isPV = true; // is principle variation.
 
 			if (side) {
 				int bestValue = INT_MIN;
@@ -1069,14 +1072,18 @@ namespace chess::SearchAgents{
 						bestValue = value;
 					}
 					if (value >= beta) {
-						isPV = false;
-						TTtable.update(key, this->searchID, TTtype::CUT, value, depth, best);
 						break;
 					}
 					alpha = std::max(alpha, value);
 				}
-				if (value > in_alpha && value < in_beta && isPV) {
+				if (value > in_alpha && value < in_beta) {
 					TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
+				}
+				else if (value >= in_beta) {
+					TTtable.update(key, this->searchID, TTtype::CUT, value, depth, best);
+				}
+				else if (value <= in_alpha) {
+					TTtable.update(key, this->searchID, TTtype::ALL, value, depth, best);
 				}
 				return value;
 			}
@@ -1102,14 +1109,20 @@ namespace chess::SearchAgents{
 						bestValue = value;
 					}
 					if (value <= alpha) {
-						isPV = false;
-						TTtable.update(key, this->searchID, TTtype::ALL, value, depth, best);
 						break;
 					}
 					beta = std::min(beta, value);
 				}
-				if (value > in_alpha && value < in_beta && isPV) {
+				if (value > in_alpha && value < in_beta) {
 					TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
+				}
+				else if (value >= in_beta) {
+					//note: 'black to move' = minimizing => upper bound = all node
+					TTtable.update(key, this->searchID, TTtype::ALL, value, depth, best);
+				}
+				else if (value <= in_alpha) {
+					//note: 'black to move' = minimizing => lower bound = cut node
+					TTtable.update(key, this->searchID, TTtype::CUT, value, depth, best);
 				}
 				return value;
 			}
