@@ -79,7 +79,7 @@ int main()
 	HWND console = GetConsoleWindow();
 	RECT r;
 	GetWindowRect(console, &r); //stores the console's current dimensions
-	MoveWindow(console, r.left, r.top, 450, 640, TRUE); // 800 width, 100 height
+	MoveWindow(console, r.left, r.top, 900, 640, TRUE); // 800 width, 100 height
 
 	//info();
 	//chess::TranspositionTable tt(4096);
