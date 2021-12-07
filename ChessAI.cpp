@@ -5,12 +5,12 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-#include "PerfT.h"
-#include "SearchAgents.h"
-#include "EvalAgents.h"
+#include "src/UCI/PerfT.h"
+#include "src/SearchAgents.h"
+#include "src/EvalAgents.h"
 #include <chrono>
 #include <windows.h>
-#include "UCI.h"
+#include "src/UCI/UCI.h"
 
 #undef min
 #undef max
@@ -18,9 +18,9 @@
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
-#include "TranspositionTable.h"
+#include "src/TranspositionTable.h"
 #include <unordered_set>
-#include "Polyglot.h"
+#include "src/chess/Polyglot.h"
 
 static std::vector<std::string> GetElements(std::string strToSplit, char delimeter)
 {
@@ -79,7 +79,7 @@ int main()
 	HWND console = GetConsoleWindow();
 	RECT r;
 	GetWindowRect(console, &r); //stores the console's current dimensions
-	MoveWindow(console, r.left, r.top, 450, 640, TRUE); // 800 width, 100 height
+	MoveWindow(console, r.left, r.top, 900, 640, TRUE); // 800 width, 100 height
 
 	//info();
 	//chess::TranspositionTable tt(4096);
