@@ -18,15 +18,15 @@ set (APP_ICON_RESOURCE_WINDOWS "ChessAI.rc")
 # Add source to this project's executable.
 
 # Main UCI AI executable
-set (AIlist "ChessAI.cpp" "ClassicBitBoard.cpp" "ClassicBitBoard.h" 
-						  "EvalAgents.cpp" "EvalAgents.h" 
-						  "Limits.cpp" "Limits.h" 
-						  "PerfT.cpp" "PerfT.h" 
-						  "Polyglot.cpp" "Polyglot.h" 
-						  "SearchAgents.cpp" "SearchAgents.h"
-						  "TranspositionTable.cpp" "TranspositionTable.h" 
-						  "UCI.cpp" "UCI.h" 
-						  "UCIOptions.cpp" "UCIOptions.h")
+set (AIlist "ChessAI.cpp" "src/chess/ClassicBitBoard.cpp" "src/chess/ClassicBitBoard.h"
+						  "src/EvalAgents.cpp" "src/EvalAgents.h"
+						  "src/UCI/Limits.cpp" "src/UCI/Limits.h"
+						  "src/UCI/PerfT.cpp" "src/UCI/PerfT.h"
+						  "src/chess/Polyglot.cpp" "src/chess/Polyglot.h"
+						  "src/SearchAgents.cpp" "src/SearchAgents.h"
+						  "src/TranspositionTable.cpp" "src/TranspositionTable.h"
+						  "src/UCI/UCI.cpp" "src/UCI/UCI.h"
+						  "src/UCI/UCIOptions.cpp" "src/UCI/UCIOptions.h")
 
 add_executable (UAFTI-ChessAI ${AIlist} ${APP_ICON_RESOURCE_WINDOWS})
 set_target_properties(UAFTI-ChessAI PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin/$<CONFIG>)

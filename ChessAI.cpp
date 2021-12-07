@@ -5,12 +5,12 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
-#include "PerfT.h"
-#include "SearchAgents.h"
-#include "EvalAgents.h"
+#include "src/UCI/PerfT.h"
+#include "src/SearchAgents.h"
+#include "src/EvalAgents.h"
 #include <chrono>
 #include <windows.h>
-#include "UCI.h"
+#include "src/UCI/UCI.h"
 
 #undef min
 #undef max
@@ -18,9 +18,9 @@
 #define _CRTDBG_MAP_ALLOC
 #include <stdlib.h>
 #include <crtdbg.h>
-#include "TranspositionTable.h"
+#include "src/TranspositionTable.h"
 #include <unordered_set>
-#include "Polyglot.h"
+#include "src/chess/Polyglot.h"
 
 static std::vector<std::string> GetElements(std::string strToSplit, char delimeter)
 {
