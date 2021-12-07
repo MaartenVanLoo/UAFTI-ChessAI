@@ -33,6 +33,7 @@ long long UCI::Limits::elapsedMicrosecondsSinceStart() {
 }
 void UCI::Limits::startSearch(bool side)
 {
+    startTime = std::chrono::steady_clock::now();
 	startItt = std::chrono::steady_clock::now();
 
 	//Compute maxSearchTime

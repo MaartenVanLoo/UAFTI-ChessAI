@@ -1,8 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
-project(my_project)
-
+project ("UAFTI-ChessAI")
 # GoogleTest requires at least C++11
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -12,17 +11,20 @@ FetchContent_Declare(
 # For Windows: Prevent overriding the parent project's compiler/linker settings
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
-
 enable_testing()
 
+
 add_executable(
-        hello_test
+        TestChessAI
+        ${AIlist}
         test.cpp
+        TestClassicBitBoard.cpp
+        TestPerfT.cpp
 )
 target_link_libraries(
-        hello_test
+        TestChessAI
         gtest_main
 )
 
 include(GoogleTest)
-gtest_discover_tests(hello_test)
+gtest_discover_tests(TestChessAI)
