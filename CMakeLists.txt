@@ -58,3 +58,6 @@ message("Cmake cxx flags release:${CMAKE_CXX_FLAGS_RELEASE}")
 message("Cmake cxx flags debug:${CMAKE_CXX_FLAGS_DEBUG}")
 
 # TODO: Add tests and install targets if needed.
+#include tests
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/)
+
