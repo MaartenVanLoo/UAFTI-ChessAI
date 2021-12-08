@@ -21,12 +21,12 @@ namespace UCI {
 		Limits();
 		void setDefault();
 		long long getElapsed();
-		long long elapsedSinceStart();
-		long long elapsedMicrosecondsSinceStart();
+		long long elapsedSinceStart() const;
+		long long elapsedMicrosecondsSinceStart() const;
 		void startSearch(bool side);
 		void nextItt();
-		bool exeeded(int depth);
-		bool exeededTime();
+		bool exceeded(int depth);
+		bool exceededTime();
 	};
 
 }

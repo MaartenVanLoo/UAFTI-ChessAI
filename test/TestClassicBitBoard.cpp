@@ -1,9 +1,9 @@
 #include "../src/chess/ClassicBitBoard.h"
 #include <algorithm>
 #include <string>
-#include "../src/SearchAgents.h"
-#include "../src/EvalAgents.h"
-#include "../src/TranspositionTable.h"
+#include "../src/Agents/SearchAgents.h"
+#include "../src/Agents/EvalAgents.h"
+#include "../src/Agents/TranspositionTable.h"
 #include <gtest/gtest.h>
 #include <gtest/gtest-param-test.h>
 
@@ -496,20 +496,21 @@ namespace ClassicBitBoard_Test {
 		chess::SearchAgents::Minimax searchAgentMinimax;
 		chess::SearchAgents::AlphaBeta searchAgentAB;
 		chess::SearchAgents::IttAlphaBeta searchAgentABitt;
-		chess::Move bestMoves[3];
+		chess::SearchAgents::PVS searchAgentPVS;
+		chess::Move bestMoves[4];
 		chess::Move ponder;
 		// Setup of test:
 		// Regardless of the searcAgent they should return the same value.
 		int depth = 1;
 		board.reset();
-		searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]);
-		searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]);
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2], ponder);
-		searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+		searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
+		searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
+        searchAgentPVS.search<chess::BetterAgent>(board,depth,bestMoves[3],ponder);
 		EXPECT_EQ(bestMoves[0], bestMoves[1]);
 		EXPECT_EQ(bestMoves[0], bestMoves[2]);
 		EXPECT_EQ(bestMoves[1], bestMoves[2]);
+        EXPECT_EQ(bestMoves[2], bestMoves[3]);
 
 		std::cout << depth << ":AB best move: " << bestMoves[1] << std::endl;
 		std::cout << "Minimax: " << searchAgentMinimax.nodes << std::endl;
@@ -520,15 +521,16 @@ namespace ClassicBitBoard_Test {
 		depth = 2;
 		board.reset();
 		searchAgentABitt.TTtable.clear();
-		searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]);
-		searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]);
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentPVS.TTtable.clear();
+        searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
+        searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
+        searchAgentPVS.search<chess::BetterAgent>(board,depth,bestMoves[3],ponder);
 
 		EXPECT_EQ(bestMoves[0], bestMoves[1]);
 		EXPECT_EQ(bestMoves[0], bestMoves[2]);
 		EXPECT_EQ(bestMoves[1], bestMoves[2]);
+		EXPECT_EQ(bestMoves[2], bestMoves[3]);
 
 		std::cout << depth << ":AB best move: " << bestMoves[1] << std::endl;
 		std::cout << "Minimax: " << searchAgentMinimax.nodes << std::endl;
@@ -539,15 +541,16 @@ namespace ClassicBitBoard_Test {
 		depth = 3;
 		board.reset();
 		searchAgentABitt.TTtable.clear();
-		searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]);
-		searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]);
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentPVS.TTtable.clear();
+        searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
+        searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
+        searchAgentPVS.search<chess::BetterAgent>(board,depth,bestMoves[3],ponder);
 
 		EXPECT_EQ(bestMoves[0], bestMoves[1]);
 		EXPECT_EQ(bestMoves[0], bestMoves[2]);
 		EXPECT_EQ(bestMoves[1], bestMoves[2]);
+        EXPECT_EQ(bestMoves[2], bestMoves[3]);
 
 		std::cout << depth << ":AB best move: " << bestMoves[1] << std::endl;
 		std::cout << "Minimax: " << searchAgentMinimax.nodes << std::endl;
@@ -558,15 +561,16 @@ namespace ClassicBitBoard_Test {
 		depth = 5;
 		board.reset();
 		searchAgentABitt.TTtable.clear();
-		searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]);
-		searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]);
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentPVS.TTtable.clear();
+        searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
+        searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
+        searchAgentPVS.search<chess::BetterAgent>(board,depth,bestMoves[3],ponder);
 
 		EXPECT_EQ(bestMoves[0], bestMoves[1]);
 		EXPECT_EQ(bestMoves[0], bestMoves[2]);
 		EXPECT_EQ(bestMoves[1], bestMoves[2]);
+        EXPECT_EQ(bestMoves[2], bestMoves[3]);
 
 		std::cout << depth << ":AB best move: " << bestMoves[1] << std::endl;
 
@@ -578,14 +582,15 @@ namespace ClassicBitBoard_Test {
 		depth = 6;
 		board.reset();
 		searchAgentABitt.TTtable.clear();
-		//searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]);
-		searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]);
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentPVS.TTtable.clear();
+        //searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
+        searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
+        searchAgentPVS.search<chess::BetterAgent>(board,depth,bestMoves[3],ponder);
 		//EXPECT_EQ(bestMoves[0], bestMoves[1]);
 		//EXPECT_EQ(bestMoves[0], bestMoves[2]);
 		EXPECT_EQ(bestMoves[1], bestMoves[2]);
+        EXPECT_EQ(bestMoves[2], bestMoves[3]);
 		
 		std::cout << depth << ":AB best move: " << bestMoves[1] << std::endl;
 
@@ -594,9 +599,7 @@ namespace ClassicBitBoard_Test {
 		std::cout << "ABitt  : " << searchAgentABitt.nodes << std::endl;
 		std::cout << " hits  : " << searchAgentABitt.tableHits << std::endl;
 
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
 		std::cout << "ABitt not reset, repeated search:" << std::endl;
 		std::cout << "ABitt  : " << searchAgentABitt.nodes << std::endl;
 		std::cout << " hits  : " << searchAgentABitt.tableHits << std::endl;
@@ -604,15 +607,16 @@ namespace ClassicBitBoard_Test {
 		depth = 7;
 		board.reset();
 		searchAgentABitt.TTtable.clear();
-		//searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]);
-		searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]);
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2], ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentPVS.TTtable.clear();
+        //searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
+        searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
+        searchAgentPVS.search<chess::BetterAgent>(board,depth,bestMoves[3],ponder);
 
 		//EXPECT_EQ(bestMoves[0], bestMoves[1]);
 		//EXPECT_EQ(bestMoves[0], bestMoves[2]);
 		EXPECT_EQ(bestMoves[1], bestMoves[2]);
+        EXPECT_EQ(bestMoves[2], bestMoves[3]);
 
 		std::cout << depth << ":AB best move: " << bestMoves[1] << std::endl;
 
@@ -621,9 +625,7 @@ namespace ClassicBitBoard_Test {
 		std::cout << "ABitt  : " << searchAgentABitt.nodes << std::endl;
 		std::cout << " hits  : " << searchAgentABitt.tableHits << std::endl;
 
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
 		std::cout << "ABitt not reset, repeated search:" << std::endl;
 		std::cout << "ABitt  : " << searchAgentABitt.nodes << std::endl;
 		std::cout << " hits  : " << searchAgentABitt.tableHits << std::endl;
@@ -632,15 +634,16 @@ namespace ClassicBitBoard_Test {
 		depth = 8;
 		board.reset();
 		searchAgentABitt.TTtable.clear();
-		//searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]);
-		searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]);
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentPVS.TTtable.clear();
+        //searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
+        searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
+        searchAgentPVS.search<chess::BetterAgent>(board,depth,bestMoves[3],ponder);
 
 		//EXPECT_EQ(bestMoves[0], bestMoves[1]);
 		//EXPECT_EQ(bestMoves[0], bestMoves[2]);
 		EXPECT_EQ(bestMoves[1], bestMoves[2]);
+		EXPECT_EQ(bestMoves[2], bestMoves[3]);
 
 		std::cout << depth << ":AB best move: " << bestMoves[1] << std::endl;
 
@@ -649,9 +652,7 @@ namespace ClassicBitBoard_Test {
 		std::cout << "ABitt  : " << searchAgentABitt.nodes << std::endl;
 		std::cout << " hits  : " << searchAgentABitt.tableHits << std::endl;
 
-		////searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
-        searchAgentABitt.limits.depth=depth;
-        searchAgentABitt.search<chess::BetterAgent>(board,bestMoves[2],ponder);
+        searchAgentABitt.search<chess::BetterAgent>(board,depth,bestMoves[2],ponder);
 		std::cout << "ABitt not reset, repeated search:" << std::endl;
 		std::cout << "ABitt  : " << searchAgentABitt.nodes << std::endl;
 		std::cout << " hits  : " << searchAgentABitt.tableHits << std::endl;

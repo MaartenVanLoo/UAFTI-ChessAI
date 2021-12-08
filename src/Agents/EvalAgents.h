@@ -1,5 +1,5 @@
 #pragma once
-#include "chess/ClassicBitBoard.h"
+#include "../chess/ClassicBitBoard.h"
 #include <iostream>
 
 namespace chess {

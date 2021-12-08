@@ -1,8 +1,6 @@
 #include "Limits.h"
 
-UCI::Limits::Limits()
-{
-}
+UCI::Limits::Limits() = default;
 
 void UCI::Limits::setDefault()
 {
@@ -25,10 +23,10 @@ long long UCI::Limits::getElapsed()
 	this->elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 	return this->elapsed;
 }
-long long UCI::Limits::elapsedSinceStart() {
+long long UCI::Limits::elapsedSinceStart() const {
 	return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 }
-long long UCI::Limits::elapsedMicrosecondsSinceStart() {
+long long UCI::Limits::elapsedMicrosecondsSinceStart() const {
 	return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - startTime).count();
 }
 void UCI::Limits::startSearch(bool side)
@@ -64,18 +62,18 @@ void UCI::Limits::nextItt()
 	lastItt = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startItt).count();
 	startItt = std::chrono::steady_clock::now();
 }
-bool UCI::Limits::exeeded(int depth)
+bool UCI::Limits::exceeded(int depth)
 {
 	if (depth > this->depth && this->depth != -1) return true;
 	elapsed =  std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 	if (this->maxSearchTime != -1) {
 		if (elapsed >= maxSearchTime) return true;
-		//if last itteration took longer than 1/4th of the remaining time => finish search, next itt will probably not be able to finish;
+		//if last iteration took longer than 1/4th of the remaining time => finish search, next itt will probably not be able to finish;
 		if (lastItt > (maxSearchTime - elapsed) / 4) return true;
 	}
 	return false;
 }
-bool UCI::Limits::exeededTime() {
+bool UCI::Limits::exceededTime() {
 	elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - startTime).count();
 	if (elapsed >= this->maxSearchTime && this->maxSearchTime != -1) return true;
 	return false;
