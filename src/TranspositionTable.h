@@ -3,7 +3,7 @@
 #include <vector>
 #include "chess/ClassicBitBoard.h"
 namespace chess{
-	enum class TTtype { PV, CUT, ALL, None };
+	enum class TTtype { PV, CUT, ALL, None, zwCUT, zwALL };
 	struct TTentry {
 		uint64_t hash = 0;
 		chess::Move move;
@@ -43,13 +43,17 @@ namespace chess{
 			}
 			// replacement scheme = always replace unless => new entry has same key and lower depth OR
 			//												 the existing entry is a PV of the current searchID;
-			if (TTable[index].depth <= depth && key == TTable[index].hash) {
-				//Update existing node
-				TTable[index].eval = eval;
-				TTable[index].depth = depth;
-				TTable[index].move = move;
-				TTable[index].type = type;
-				TTable[index].ID = ID;
+			if (TTable[index].depth <= depth && key == TTable[index].hash && TTable[index].type != TTtype::PV) {
+			    //if (type == TTtype::zwALL || type == TTtype::zwCUT){
+			    //    if (TTable[index].type == TTtype::ALL || TTable[index].type == TTtype::CUT || TTable[index].type == TTtype::PV)
+			    //        return;
+			    //}
+                //Update existing node
+                TTable[index].eval = eval;
+                TTable[index].depth = depth;
+                TTable[index].move = move;
+                TTable[index].type = type;
+                TTable[index].ID = ID;
 			}
 			else {
 				if (key != TTable[index].hash) this->entries++;

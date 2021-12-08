@@ -1067,14 +1067,18 @@ namespace chess::SearchAgents{
 						return eval;
 					}
 					else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
-						//alpha = entry.eval;
-						//best = entry.move;
-						if (eval >= beta) { return eval; }
+						 if (side) {
+                            if (eval >= beta) { return eval; }
+                        }else{
+                            if (eval <= alpha){ return eval; }
+                        }
 					}
 					else if (type == TTtype::ALL) { //Knuth's Type 3 = upper bound
-						//beta = entry.eval;
-						//best = entry.move;
-						if (eval <= alpha) { return eval; }
+						 if (side){
+                            if (eval <= alpha) { return eval; }
+                        }else{
+                            if (eval >= beta) { return eval; }
+                        }
 					}
 					else {
 						std::cout << "Something went wrong????" << std::endl;
@@ -1417,10 +1421,18 @@ namespace chess::SearchAgents{
                         return eval;
                     }
                     else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
-                        if (eval >= beta) { return eval; }
+                        if (side) {
+                            if (eval >= beta) { return eval; }
+                        }else{
+                            if (eval <= alpha){ return eval; }
+                        }
                     }
                     else if (type == TTtype::ALL) { //Knuth's Type 3 = upper bound
-                        if (eval <= alpha) { return eval; }
+                        if (side){
+                            if (eval <= alpha) { return eval; }
+                        }else{
+                            if (eval >= beta) { return eval; }
+                        }
                     }
                     else {
                         std::cout << "Something went wrong????" << std::endl;
@@ -1494,7 +1506,8 @@ namespace chess::SearchAgents{
                         bestValue = value;
                     }
                     if (value >= beta) {
-                        return beta; //fail-hard beta-cutoff
+                        break;//fail-hard beta-cutoff
+                        //return beta;
                     }
                     alpha = std::max(alpha, value);
                     bSearchPV = false; //after first node search is set to false => start ZW search;
@@ -1598,12 +1611,20 @@ namespace chess::SearchAgents{
                     else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
                         //alpha = entry.eval;
                         //best = entry.move;
-                        if (eval >= beta) { return eval; }
+                        if (side){
+                            if (eval >= beta) { return eval; }
+                        }else{
+                            if( eval <= alpha){ return eval; }
+                        }
                     }
                     else if (type == TTtype::ALL) { //Knuth's Type 3 = upper bound
                         //beta = entry.eval;
                         //best = entry.move;
-                        if (eval <= alpha) { return eval; }
+                        if (side){
+                            if (eval <= alpha) { return eval; }
+                        }else{
+                            if (eval >= beta) {return eval; }
+                        }
                     }
                     else {
                         std::cout << "Something went wrong????" << std::endl;
@@ -1672,12 +1693,12 @@ namespace chess::SearchAgents{
                     TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
                 }
                 else if (value >= in_beta) {
-                    TTtable.update(key, this->searchID, TTtype::CUT, value, depth, best);
+                    TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
                 }
                 else if (value <= in_alpha) {
-                    TTtable.update(key, this->searchID, TTtype::ALL, value, depth, best);
+                    TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
                 }
-                return value;
+                return bestValue;
             }
             else {
                 int bestValue = INT_MAX;
@@ -1709,13 +1730,13 @@ namespace chess::SearchAgents{
                 }
                 else if (value >= in_beta) {
                     //note: 'black to move' = minimizing => upper bound = all node
-                    TTtable.update(key, this->searchID, TTtype::ALL, value, depth, best);
+                    TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
                 }
                 else if (value <= in_alpha) {
                     //note: 'black to move' = minimizing => lower bound = cut node
-                    TTtable.update(key, this->searchID, TTtype::CUT, value, depth, best);
+                    TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
                 }
-                return value;
+                return bestValue;
             }
         }
     };
