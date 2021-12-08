@@ -102,7 +102,7 @@ void UCI::UCI::start()
 void UCI::UCI::init()
 {
 	board = chess::ClassicBitBoard(chess::ClassicBitBoard::startpos);
-	searchAgent = chess::SearchAgents::IttAlphaBeta();
+	searchAgent = chess::SearchAgents::PVS();
 	evalAgent = chess::BetterAgent();
 	options = UCIOptions();	
 	book = chess::Polyglot(this->polyglotBook);
@@ -196,9 +196,8 @@ void UCI::UCI::go(std::istringstream& is)
 		//board.makeMove(bestmove);
 		//this->polyglotPonder = std::async(std::launch::async, &chess::PolyglotPonder::computePonder,std::ref(bookPonder),board);
 		//board.undoMove();
+        //Werkt niet: std::async(std::launch::async, &chess::SearchAgents::PVS::search<chess::BetterAgent, true>,std::ref(board),std::ref(bestmove), std::ref(ponder),std::ref(stopFlag));
 	}
-
-
 }
 
 void UCI::UCI::newgame()
@@ -217,6 +216,7 @@ void UCI::UCI::position(std::istringstream& is)
 	if (token == "startpos") {
 		//board.reset();
 		board = chess::ClassicBitBoard(chess::ClassicBitBoard::startpos);
+		board = chess::ClassicBitBoard();
 		is >> token;
 		if (debug) logFile << " " << token;
 	}

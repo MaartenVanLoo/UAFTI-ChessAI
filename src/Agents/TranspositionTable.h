@@ -1,9 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <vector>
-#include "chess/ClassicBitBoard.h"
+#include "../chess/ClassicBitBoard.h"
 namespace chess{
-	enum class TTtype { PV, CUT, ALL, None, zwCUT, zwALL };
+	enum class TTtype { PV, CUT, ALL, None};
 	struct TTentry {
 		uint64_t hash = 0;
 		chess::Move move;
@@ -44,10 +44,6 @@ namespace chess{
 			// replacement scheme = always replace unless => new entry has same key and lower depth OR
 			//												 the existing entry is a PV of the current searchID;
 			if (TTable[index].depth <= depth && key == TTable[index].hash && TTable[index].type != TTtype::PV) {
-			    //if (type == TTtype::zwALL || type == TTtype::zwCUT){
-			    //    if (TTable[index].type == TTtype::ALL || TTable[index].type == TTtype::CUT || TTable[index].type == TTtype::PV)
-			    //        return;
-			    //}
                 //Update existing node
                 TTable[index].eval = eval;
                 TTable[index].depth = depth;

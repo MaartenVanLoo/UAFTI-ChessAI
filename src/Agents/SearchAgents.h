@@ -1,11 +1,11 @@
-#include "chess/ClassicBitBoard.h"
+#include "../chess/ClassicBitBoard.h"
 #include <iostream>
 #include <sstream>
 #include "TranspositionTable.h"
 #include <chrono>
 #include <unordered_map>
-#include "UCI/Limits.h"
-#include "chess/Polyglot.h"
+#include "../UCI/Limits.h"
+#include "../chess/Polyglot.h"
 #include "EvalAgents.h"
 #pragma once
 namespace chess::SearchAgents{
@@ -324,7 +324,7 @@ namespace chess::SearchAgents{
 				}
 				else {
 					draws++;
-					return 0; //DRAW
+					return draw_value; //DRAW
 				}
 			}
             if (this->twoFoldEnabled && board.isTwoFold()) {//Twofold repetition => not making 'progress' => count as a draw

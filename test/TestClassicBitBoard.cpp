@@ -1,9 +1,9 @@
 #include "../src/chess/ClassicBitBoard.h"
 #include <algorithm>
 #include <string>
-#include "../src/SearchAgents.h"
-#include "../src/EvalAgents.h"
-#include "../src/TranspositionTable.h"
+#include "../src/Agents/SearchAgents.h"
+#include "../src/Agents/EvalAgents.h"
+#include "../src/Agents/TranspositionTable.h"
 #include <gtest/gtest.h>
 #include <gtest/gtest-param-test.h>
 

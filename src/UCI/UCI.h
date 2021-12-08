@@ -1,7 +1,7 @@
 #pragma once
 #include "../chess/ClassicBitBoard.h"
-#include "../SearchAgents.h"
-#include "../EvalAgents.h"
+#include "../Agents/SearchAgents.h"
+#include "../Agents/EvalAgents.h"
 #include "UCIOptions.h"
 #include <fstream>
 #include <chrono>
@@ -27,7 +27,8 @@ namespace UCI {
 	{
 		chess::ClassicBitBoard board;
 		//chess::SearchAgents::AlphaBeta searchAgent;
-		chess::SearchAgents::IttAlphaBeta searchAgent;
+		//chess::SearchAgents::IttAlphaBeta searchAgent;
+		chess::SearchAgents::PVS searchAgent;
 		chess::BetterAgent evalAgent;
 		UCIOptions options;
 		chess::Move bestmove;
