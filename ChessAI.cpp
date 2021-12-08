@@ -181,6 +181,7 @@ void AISelfplay(std::ofstream& log,std::string fen, int depth) {
 	
 	const int depth_minmax = std::min(depth, 6);
 	chess::Move nextMove;
+	chess::Move ponderMove;
 	std::vector<chess::Move> moves;
 	std::cout << brd.toASCII();
 	do {
@@ -207,12 +208,8 @@ void AISelfplay(std::ofstream& log,std::string fen, int depth) {
 		*/
 		//alpha beta
 		begin = std::chrono::steady_clock::now();
-		if (brd.side) {
-			value = searchAgent.alphabeta<chess::BetterAgent, true>(brd, depth, nextMove);
-		}
-		else {
-			value = searchAgent.alphabeta<chess::BetterAgent, false>(brd, depth, nextMove);
-		}
+		value = searchAgent.search<chess::BetterAgent>(brd, depth, nextMove, ponderMove);
+
 		end = std::chrono::steady_clock::now();
 		elapsedseconds = std::chrono::duration_cast<std::chrono::milliseconds> (end - begin).count();
 		std::cout << "Alpha beta:" << std::endl;
@@ -433,11 +430,11 @@ void testSearchAgents() {
 		board.reset();
 		searchAgentABitt.TTtable.clear();
 		begin = std::chrono::steady_clock::now();
-		if (active[0]) searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]);
+		if (active[0]) searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
 		end0 = std::chrono::steady_clock::now();
-		if (active[1]) searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]);
+		if (active[1]) searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
 		end1 = std::chrono::steady_clock::now();
-		//if (active[2]) searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
+		////if (active[2]) searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder);
 		end2 = std::chrono::steady_clock::now();
 		elapsedseconds0 = std::chrono::duration_cast<std::chrono::milliseconds> (end0 - begin).count();
 		elapsedseconds1 = std::chrono::duration_cast<std::chrono::milliseconds> (end1 - end0).count();
@@ -490,10 +487,10 @@ void testSearchAgents() {
 			std::cout << "\nMOVE " << i << std::endl;
 
 			begin = std::chrono::steady_clock::now();
-			if (active[0]) (board.side)?searchAgentMinimax.minimax<chess::BetterAgent, true>(board, depth, bestMoves[0]): searchAgentMinimax.minimax<chess::BetterAgent, false>(board, depth, bestMoves[0]);
-			end0 = std::chrono::steady_clock::now();
-			if (active[1]) (board.side) ? searchAgentAB.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[1]): searchAgentAB.alphabeta<chess::BetterAgent, false>(board, depth, bestMoves[1]);
-			end1 = std::chrono::steady_clock::now();
+            if (active[0]) searchAgentMinimax.search<chess::BetterAgent>(board, depth, bestMoves[0],ponder);
+            end0 = std::chrono::steady_clock::now();
+            if (active[1]) searchAgentAB.search<chess::BetterAgent>(board, depth, bestMoves[1],ponder);
+            end1 = std::chrono::steady_clock::now();
 			//if (active[2]) (board.side) ? searchAgentABitt.alphabeta<chess::BetterAgent, true>(board, depth, bestMoves[2],ponder): searchAgentABitt.alphabeta<chess::BetterAgent, false>(board, depth, bestMoves[2],ponder);
 			end2 = std::chrono::steady_clock::now();
 			elapsedseconds0 = std::chrono::duration_cast<std::chrono::milliseconds> (end0 - begin).count();
