@@ -7894,19 +7894,19 @@ namespace chess {
 		}
 
 		//__forceinline constexpr uint64_t operator[](const uint64_t blocker) const
-		__forceinline constexpr uint64_t operator[](const uint64_t blocker) const
+		__forceinline uint64_t operator[](const uint64_t blocker) const
 		{
 			//return AttackPtr[_pext_u64(blocker, Mask)];
 			//return AttackPtr[_pext_u64_emulated(blocker, Mask)]; //beter on AMD! => amd has bad pext r64 r64 r64 support, should be better on zen 3 (ryzen 5000)
 			//https://www.techadvisor.com/news/pc-components/amd-zen-4-3801795/
 		    //https://www.anandtech.com/show/16214/amd-zen-3-ryzen-deep-dive-review-5950x-5900x-5800x-and-5700x-tested/6
 
-			if (std::is_constant_evaluated()) { //c++ 20
-				return AttackPtr[_pext_u64_emulated(blocker, Mask)];
-			}
-			else {
+			//if (std::is_constant_evaluated()) { //c++ 20
+			//	return AttackPtr[_pext_u64_emulated(blocker, Mask)];
+			//}
+			//else {
 				return AttackPtr[_pext_u64(blocker, Mask)];
-			}
+			//}
 		}
 	};
 	static const SliderPext_t Pext_RookAttacks[64] = {
@@ -8207,32 +8207,32 @@ namespace chess {
 		}
 
 		//_InlineStatic uint64_t Rook(uint64_t square, uint64_t occupy) {
-		_Compiletime uint64_t Rook(uint64_t square, uint64_t occupy) {
+		_InlineStatic uint64_t Rook(uint64_t square, uint64_t occupy) {
 			return Pext_RookAttacks[square][occupy];
 		}
 
 		//_InlineStatic uint64_t Rook_Xray(uint64_t square, uint64_t occupy) {
-		_Compiletime uint64_t Rook_Xray(uint64_t square, uint64_t occupy) {
+		_InlineStatic uint64_t Rook_Xray(uint64_t square, uint64_t occupy) {
 			return Pext_RookAttacks_Xray[square][occupy];
 		}
 
 		//_InlineStatic uint64_t Bishop(uint64_t square, uint64_t occupy) {
-		_Compiletime uint64_t Bishop(uint64_t square, uint64_t occupy) {
+		_InlineStatic uint64_t Bishop(uint64_t square, uint64_t occupy) {
 			return Pext_BishopAttacks[square][occupy];
 		}
 
 		//_InlineStatic uint64_t Bishop_Xray(uint64_t square, uint64_t occupy) {
-		_Compiletime uint64_t Bishop_Xray(uint64_t square, uint64_t occupy) {
+		_InlineStatic uint64_t Bishop_Xray(uint64_t square, uint64_t occupy) {
 			return Pext_BishopAttacks_Xray[square][occupy];
 		}
 
 		//_InlineStatic uint64_t Queen(uint64_t square, uint64_t occupy) {
-		_Compiletime uint64_t Queen(uint64_t square, uint64_t occupy) {
+		_InlineStatic uint64_t Queen(uint64_t square, uint64_t occupy) {
 			return Rook(square, occupy) | Bishop(square, occupy);
 		}
 
 		//_InlineStatic uint64_t Queen_Xray(uint64_t square, uint64_t occupy) {
-		_Compiletime uint64_t Queen_Xray(uint64_t square, uint64_t occupy) {
+		_InlineStatic uint64_t Queen_Xray(uint64_t square, uint64_t occupy) {
 			return Rook_Xray(square, occupy) | Bishop_Xray(square, occupy);
 		}
 	};

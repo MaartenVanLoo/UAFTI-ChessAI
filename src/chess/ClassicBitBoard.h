@@ -80,7 +80,10 @@ namespace chess {
         static std::string toLAN(const Move& move);
         static uint16_t compress(Move move);
         static Move decompress(uint16_t move);
-        friend bool operator== (const Move& move1, const Move& move2);
+        //friend bool operator== (const Move& move1, const Move& move2);
+        bool operator==(const Move &rhs) const;
+        bool operator!=(const Move &rhs) const;
+
         friend std::ostream& operator<<(std::ostream& os, const Move& move) {
             os << Move::toLAN(move);
             return os;
@@ -88,6 +91,7 @@ namespace chess {
         std::string to_string() const {
             return Move::toLAN(*this);
         }
+
     };
 
   
@@ -775,7 +779,7 @@ namespace chess {
         template <bool IsWhite>
         void sort(std::vector<Move>& moves)
         {
-            //Sorting: 
+            //Sorting:
             //1. Bestmove from TT
             //2. Capturing moves
             //3. Other moves

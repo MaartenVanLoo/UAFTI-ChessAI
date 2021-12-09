@@ -2141,15 +2141,18 @@ namespace chess {
         return uint16_t();
     }
 
-    bool operator==(const Move& move1, const Move& move2)
-    {
-        if (move1.IsWhite != move2.IsWhite) return false;
-        if (move1.from != move2.from) return false;
-        if (move1.to != move2.to) return false;
-        if (move1.flags != move2.flags) return false;
-        return true;
+    bool Move::operator==(const Move &rhs) const {
+        return from == rhs.from &&
+               to == rhs.to &&
+               flags == rhs.flags &&
+               IsWhite == rhs.IsWhite;
     }
-    #pragma endregion
+
+    bool Move::operator!=(const Move &rhs) const {
+        return !(rhs == *this);
+    }
+
+#pragma endregion
 
     /**************************\
 

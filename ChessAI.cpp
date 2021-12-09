@@ -43,6 +43,7 @@ void pgnBench();
 void trainingSet();
 void testSearchAgents();
 void polyglot();
+void threadBomb();
 int main()
 {
 	/*chess::ClassicBitBoard board;
@@ -545,4 +546,31 @@ void polyglot() {
 	std::cout << b1 << " conains " << book1.size() << " elements " << std::endl;
 	std::cout << b2 << " conains " << book2.size() << " elements " << std::endl;
 	
+}
+
+
+int threadFunction(std::atomic_bool& cancellation_token, int index){
+    int x = 0;
+    std::cout << &cancellation_token << std::endl;
+    while (!cancellation_token){
+        x++;
+    }
+    return x;
+}
+void threadBomb(){
+    std::atomic_bool cancellation_token = false;
+
+    std::cout << cancellation_token << std::endl;
+    unsigned int n = std::thread::hardware_concurrency(); //get number of threads on system
+    std::cout << n << std::endl;
+    std::vector<std::future<int>> threads;
+    for (unsigned int i = 0; i < n; i++){
+        threads.push_back(std::async(std::launch::async,threadFunction,std::ref(cancellation_token),i));
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(50000));
+    cancellation_token = true;
+    for (unsigned int j = 0; j < n; j++){
+        std::cout << threads[j].get() << std::endl;
+    };
+
 }
