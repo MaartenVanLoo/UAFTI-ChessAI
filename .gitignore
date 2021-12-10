@@ -10,3 +10,5 @@ cmake-build-debug/
 cmake-build-release/
 
 .idea/
+
+src/nn/__pycache__/
