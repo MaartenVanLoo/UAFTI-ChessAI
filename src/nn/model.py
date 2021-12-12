@@ -23,10 +23,11 @@ class EvalAgent(nn.Module):
             torch.nn.ReLU()
         )
         self.layer3 = nn.Sequential(
-            torch.nn.Linear(self.options.hidden_sizes[2], self.options.hidden_sizes[3])
+            torch.nn.Linear(self.options.hidden_sizes[2], self.options.hidden_sizes[3]),
+            torch.nn.Softplus(beta=2,threshold=10)
         )
         self.layer4 = nn.Sequential(
-            torch.nn.Linear(self.options.hidden_sizes[3], self.options.hidden_sizes[4])
+            torch.nn.Linear(self.options.hidden_sizes[3], self.options.hidden_sizes[4]),
         )
         """END TODO"""
 
