@@ -24,7 +24,7 @@ message(Prefix: ${CMAKE_PREFIX_PATH})
 find_package(Torch REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
-add_executable(example-app libtorch.cpp evalModel.cpp)
+add_executable(example-app libtorch.cpp evalModel.cpp ChessDataloader.cpp ChessAIModel.cpp ${AIlist})
 target_link_libraries(example-app "${TORCH_LIBRARIES}")
 if(MSVC)
     target_compile_options(example-app PRIVATE /W0)

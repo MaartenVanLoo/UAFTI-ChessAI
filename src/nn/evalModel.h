@@ -11,6 +11,7 @@ struct Eval : torch::nn::Module{
     torch::nn::Linear fc1{nullptr}, fc2{nullptr}, fc3{nullptr};
     Eval();
     torch::Tensor forward(torch::Tensor x);
+    void saveParameters(std::string& filename);
 };
 
 

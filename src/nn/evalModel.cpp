@@ -17,5 +17,16 @@ torch::Tensor Eval::forward(torch::Tensor x) {
     x = torch::log_softmax(fc3->forward(x), /*dim=*/1);
     return x;
 }
+void Eval::saveParameters(std::string& filename){
+    std::vector<torch::Tensor> vec = {
+            fc1->weight, fc1->bias,
+            fc2->weight, fc2->bias,
+            fc3->weight, fc3->bias
+    };
+    std::vector<char> chars = torch::pickle_save(vec);
+    std::ofstream ofstream(filename, std::ios::out | std::ios::binary);
+    ofstream.write(chars.data(), chars.size());
+    ofstream.close();
+}
 
 
