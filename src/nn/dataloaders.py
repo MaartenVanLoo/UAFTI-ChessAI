@@ -16,7 +16,7 @@ class Options:
         self.device = "cuda:0"
         self.train_dataset_size = 128
         self.test_dataset_size = 128
-        self.num_epochs = 1
+        self.num_epochs = 5
 
 class ChessDataset(Dataset):
 

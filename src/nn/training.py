@@ -1,6 +1,7 @@
 import asyncio
 import random
 import time
+from datetime import datetime
 
 import torch
 import torch.utils
@@ -27,7 +28,7 @@ def init_pytorch(options: Options):
 def evalAgentTraining(options:Options,dataloader:torch.utils.data.DataLoader):
     agent = EvalAgent(options).to(options.device)
     criterion = torch.nn.MSELoss()
-    optimizer= torch.optim.SGD(agent.parameters(),lr=0.000001)
+    optimizer= torch.optim.SGD(agent.parameters(),lr=0.000002)
     start_time = time.time()
     for epoch in range(0,options.num_epochs):
         running_loss = 0
@@ -44,11 +45,17 @@ def evalAgentTraining(options:Options,dataloader:torch.utils.data.DataLoader):
             running_loss += loss.item()
             batchCount+=1
             if batchCount%200==0:
-                print(f'epoch [{epoch + 1}/{options.num_epochs}] [{batchCount}/{len(dataloader)}]: ', end="")
+                now=datetime.now()
+                string_time = ('%02d:%02d:%02d.%d'%(now.hour,now.minute,now.second,now.microsecond))[:-3]
+                print(f'[{string_time}]:epoch [{epoch + 1}/{options.num_epochs}] [{batchCount}/{len(dataloader)}]: ', end="")
                 print(f"Running loss = {running_loss / (batchCount)}")
+        torch.save(agent.state_dict(), f"State{epoch+1}.model")
+        torch.save(agent, f"State{epoch+1}.pt")
 
 
 if __name__ == "__main__":
+    now=datetime.now()
+    print(('%02d:%02d:%02d.%06d'%(now.hour,now.minute,now.second,now.microsecond))[:-3])
     options = Options()
     init_pytorch(options)
     # dataset = ChessDataset("C:/Universiteit/5-Artificiele_Intelligentie/Practicum4/UA_ChessAI_Project/ChessData",0,
@@ -57,13 +64,14 @@ if __name__ == "__main__":
     datasets = []
     for batch in batches:
         datasets.append(ChessDataset(
-            "C:/Universiteit/5-Artificiele_Intelligentie/Practicum4/UA_ChessAI_Project"
+            #"C:/Universiteit/5-Artificiele_Intelligentie/Practicum4/UA_ChessAI_Project"
+            "D:/Documenten/Universiteit/5-AI"
                                      "/ChessData", batch, options))
     concatDataSets = torch.utils.data.ConcatDataset(datasets)
-    data = torch.utils.data.DataLoader(datasets[0],batch_size = 128,shuffle=True, num_workers = 4,pin_memory=True,
+    data = torch.utils.data.DataLoader(datasets[0],batch_size = 128,shuffle=True, num_workers = 3,pin_memory=True,
                                        persistent_workers=True)
-    f = open('C:/Universiteit/5-Artificiele_Intelligentie/Practicum4/UA_ChessAI_Project/ChessData/FEN/FenBatch00.txt','r')
-    print(f.readline())
+    #f = open('C:/Universiteit/5-Artificiele_Intelligentie/Practicum4/UA_ChessAI_Project/ChessData/FEN/FenBatch00.txt','r')
+    #print(f.readline())
 
 
 
