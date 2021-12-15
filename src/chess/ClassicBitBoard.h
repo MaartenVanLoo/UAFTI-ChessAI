@@ -750,8 +750,9 @@ namespace chess {
         inline void makeMove(const Move &move);
         //template<BoardPiece piece, bool white, bool castleL, bool castleR, bool EP>
         inline bool undoMove();
+        void generate_capture_moves(std::vector<Move> &moves);
         void generate_moves(std::vector<Move> &moves);
-        
+
         std::string getFen();
         bool LAN2Move(const std::string& lan, Move& move);
         bool Move2LAN(const Move& move, std::string& lan);
@@ -924,7 +925,11 @@ namespace chess {
         
         //Generate moves
         template<bool IsWhite>
+        inline void _generate_capture_moves(std::vector<Move>& moves);
+        template<bool IsWhite>
         inline void _generate_moves(std::vector<Move>& moves);
+        template<bool IsWhite, bool inCheck>
+        __forceinline void __generate_capture_moves(map kingatk, const map kingban, const map chekcmask, std::vector<Move>& moves);
         template<bool IsWhite, bool inCheck>
         __forceinline void __generate_moves(map kingatk, const map kingban, const map chekcmask, std::vector<Move>& moves);
         template<bool IsWhite>
