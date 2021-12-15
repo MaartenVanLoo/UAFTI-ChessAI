@@ -11,150 +11,205 @@
 namespace chess::SearchAgents{
 	const int draw_value = 0;
 	const int mate_Value = INT_MAX-2000;
+
 	class Quiescence {
+	private:
+	    //used as default parameter;
+	    static Move staticmove;
 	public:
-		static inline uint64_t nodes;
-		static inline uint64_t threefold;
-		static inline uint64_t mates;
-		static inline uint64_t draws;
+	    //counters;
+        uint8_t searchID = 0; //increment every time a new search is started, overflow at the end => not a problem.
+        uint64_t nodes;
+        uint64_t threefold;
+        uint64_t twofold;
+        uint64_t mates;
+        uint64_t draws;
+        uint64_t tableHits;
 
-		template<class EvalAgent, bool side>
-		static int quiescence(chess::ClassicBitBoard& board) {
-			std::vector<Move> moves;
-			board.generate_moves(moves);
-			int value = side ? INT_MIN : INT_MAX;
-			//terminal value check!
-			if (moves.empty()) //No more moves=terminal node
-			{
-				if (board.isCheck<side>()) {
-					mates++;
-					return side ? -mate_Value-0 : mate_Value+0; //MATE, if depth is higher number = less deep = evaluated better
-				}
-				else {
-					draws++;
-					return 0; //DRAW
-				}
-			}
-			if (board.isThreeFold()) {
-				threefold++;
-				return draw_value;
-			}
+        //help objects
+        std::vector<std::vector<Move>> moves;
 
-			//TODO: Make a method that only generates captures!! (no more filtering!)
-			std::vector<Move> captures;
-			captures.reserve(moves.size());
-			//filter only capture moves!
-			for (auto & move : moves) {
-				if (side) {
-					if (move.to & board.Black) {
-						captures.push_back(move);
-					}
-				}
-				else {
-					if (move.to & board.White) {
-						captures.push_back(move);
-					}
-				}
+        //Pointer to calling agent objects
+        TranspositionTable* TTtable = nullptr;
+        UCI::Limits* limits = nullptr;
 
-			}
+        bool twoFoldEnabled = true;
+        bool threeFoldEnabled = true;
 
-			//if no capture moves => eval position
-			if (captures.empty()) {
-				return EvalAgent::template eval<side>(board);
-			}
-			//now continue search with only capture moves
-			if (side) {
-				for (Move& m : captures) {
-					board.makeMove(m); nodes++;
-					value = std::max(value, quiescence<EvalAgent, !side>(board));
-					board.undoMove();
-					//std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-				}
-				return value;
-			}
-			else {
-				for (Move& m : captures) {
-					board.makeMove(m); nodes++;
-					value = std::min(value, quiescence<EvalAgent, !side>(board));
-					board.undoMove();
-					//std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-				}
-				return value;
-			}
-		}
 
-		template<class EvalAgent, bool side>
-		static int quiescence(chess::ClassicBitBoard& board, int alpha, int beta) {
-			std::vector<Move> moves;
-			board.generate_moves(moves);
-			int value = side ? INT_MIN : INT_MAX;
-			//terminal value check!
-			if (moves.empty()) //No more moves=terminal node
-			{
-				if (board.isCheck<side>()) {
-					mates++;
-					return side ? -mate_Value-0 : mate_Value+0; //MATE
-				}
-				else {
-					draws++;
-					return 0; //DRAW
-				}
-			}
-			if (board.isThreeFold()) {
-				threefold++;
-				return draw_value;
-			}
+        Quiescence(TranspositionTable *TTtable, UCI::Limits *limits) :TTtable(TTtable), limits(limits){}
 
-			//TODO: Make a method that only generates captures!! (no more filtering!)
-			std::vector<Move> captures;
-			captures.reserve(moves.size());
-			//filter only capture moves!
-			for (auto & move : moves) {
-				if (side) {
-					if (move.to & board.Black) {
-						captures.push_back(move);
-					}
-				}
-				else {
-					if (move.to & board.White) {
-						captures.push_back(move);
-					}
-				}
+        /// <summary>
+        /// Call at start of search to make sure non of the pointers have been changed by the UCI engine;
+        /// </summary>
+        void setPointers(TranspositionTable *TTtable, UCI::Limits *limits){
+            TTtable = TTtable;
+            limits = limits;
+        }
+        void setRepetition(bool twoFoldEnabled, bool threeFoldEnabled){
+            this->twoFoldEnabled = twoFoldEnabled;
+            this->threeFoldEnabled = threeFoldEnabled;
+        }
+        void setSearchID(uint8_t searchID){this->searchID = searchID;}
+        void resetCounter(){
+            this->nodes = 0;
+            this->threefold = 0;
+            this->twofold = 0;
+            this->mates = 0;
+            this->draws = 0;
+            this->tableHits = 0;
+        }
 
-			}
 
-			//if no capture moves => eval position
-			if (captures.empty()) {
-				return EvalAgent::template eval<side>(board);
-			}
-			//now continue search with only capture moves
-			if (side) {
-				for (Move& m : captures) {
-					board.makeMove(m); nodes++;
-					value = std::max(value, quiescence<EvalAgent, !side>(board, alpha, beta));
-					board.undoMove();
-					//std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-					if (value >= beta) {
-						break;
-					}
-					alpha = std::max(alpha, value);
-				}
-				return value;
-			}
-			else {
-				for (Move& m : captures) {
-					board.makeMove(m); nodes++;
-					value = std::min(value, quiescence<EvalAgent, !side>(board, alpha, beta));
-					board.undoMove();
-					//std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-					if (value <= alpha) {
-						break;
-					}
-					beta = std::min(beta, value);
-				}
-				return value;
-			}
-		}
+        /// <summary>
+        /// Qsearch. Depth is needed to create a correct mate value, also takes alpha and beta into account for pruning
+        /// Has acces to the same TTtable as calling search agent! Also limits can be accessed
+        /// ply is only used internaly for reusing memory => do not use when calling from other search agent
+        /// qsearch is based on the normal "alpha beta" three;
+        /// </summary>
+        template <class EvalAgent,bool side>
+        int qsearch(chess::ClassicBitBoard& board, int depth, int alpha, int beta, int ply = 0, Move& best = staticmove){
+            if (moves.size() <= ply ){ moves.resize((int)(moves.size() * 1.5 + 1)); } //make sure "moves" is big enough
+            this->nodes++;
+
+            //if time limis is exceeded cuase the parent node to "CUT".
+            //return "0" could cause undefined behavior (might be better compared to actual value)
+            if (this->limits->exceededTime()) {
+                std::cout << "time exceeded" << std::endl;
+                return side?INT_MAX : INT_MIN;
+            }
+
+            //probe transposition table
+            uint64_t key = ClassicBitBoard::HashUtil::createHash(board);
+            bool tablehit = TTtable->contains(key);
+            Move firstMove;
+            if (tablehit) {
+                tableHits++;
+                firstMove = TTtable->move(key, this->searchID);
+                if (TTtable->depth(key, this->searchID) >= -ply) {
+                    // Already computed => note, qsearch depth can become negative! => negative depth = used for all
+                    // qsearch entries. Note => any entry for regular search outperformes the qsearch.
+                    chess::TTtype type = TTtable->type(key, this->searchID);
+                    int eval = TTtable->eval(key, this->searchID);
+                    if (type == TTtype::PV) { //Knuth's Type 1
+                        return eval;
+                    }
+                    else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
+                        if (side) {
+                            if (eval >= beta) { return eval; }
+                        }else{
+                            if (eval <= alpha){ return eval; }
+                        }
+                    }
+                    else if (type == TTtype::ALL) { //Knuth's Type 3 = upper bound
+                        if (side){
+                            if (eval <= alpha) { return eval; }
+                        }else{
+                            if (eval >= beta) { return eval; }
+                        }
+                    }
+                    else {
+                        std::cout << "Something went wrong????" << std::endl;
+                    }
+                }
+            }
+
+            //check if node is terminal
+            board.generate_capture_moves(moves[ply]);
+            if (moves[ply].empty()) //No more moves=terminal node
+            {
+                //Note => no mate check TODO: check if mate check can be implemented without generating all moves?
+                //Terminal node in q search => do evaluation;
+                return EvalAgent::template eval<!side>(board);
+            }
+
+            //Repetition
+            if (this->twoFoldEnabled && board.isTwoFold()) {	// Twofold repetition => not making 'progress' => count as a draw
+                twofold++;
+                return draw_value;
+            }
+            else if (this->threeFoldEnabled && board.isThreeFold()) {
+                threefold++;
+                return draw_value;
+            }
+
+            //set 'PV move first':
+            if (tablehit) {
+                board.sort<side>(moves[ply], firstMove);
+            }
+            else {
+                board.sort<side>(moves[ply]);
+            }
+
+            int in_alpha = alpha;
+            int in_beta = beta;
+
+            //Start actual search
+            if (side) {
+                int bestValue = INT_MIN;
+                int value = INT_MIN;
+                for (Move& m : moves[depth]) {
+                    board.makeMove(m);
+                    value = std::max(value, qsearch<EvalAgent, !side>(board, depth - 1, alpha, beta, ply + 1,firstMove));
+                    board.undoMove();
+                    //std::cout << board.MovetoSAN(m) << " " << value << std::endl;
+                    if (value > bestValue) {
+                        best.flags = m.flags;
+                        best.from = m.from;
+                        best.to = m.to;
+                        best.IsWhite = m.IsWhite;
+                        bestValue = value;
+                    }
+                    if (value >= beta) {
+                        break;
+                    }
+                    alpha = std::max(alpha, value);
+                }
+                if (value > in_alpha && value < in_beta) {
+                    TTtable->update(key, this->searchID, TTtype::PV, value, -ply, best);
+                }
+                else if (value >= in_beta) {
+                    TTtable->update(key, this->searchID, TTtype::CUT, value, -ply, best);
+                }
+                else if (value <= in_alpha) {
+                    TTtable->update(key, this->searchID, TTtype::ALL, value, -ply, best);
+                }
+                return value;
+            }
+            else {
+                int bestValue = INT_MAX;
+                int value = INT_MAX;
+                for (Move& m : moves[depth]) {
+                    board.makeMove(m); nodes++;
+                    value = std::min(value, qsearch<EvalAgent, !side>(board, depth - 1, alpha, beta, ply + 1,firstMove));
+                    board.undoMove();
+                    //std::cout << board.MovetoSAN(m) << " " << value << std::endl;
+                    if (value < bestValue) {
+                        best.flags = m.flags;
+                        best.from = m.from;
+                        best.to = m.to;
+                        best.IsWhite = m.IsWhite;
+                        bestValue = value;
+                    }
+                    if (value <= alpha) {
+                        break;
+                    }
+                    beta = std::min(beta, value);
+                }
+                if (value > in_alpha && value < in_beta) {
+                    TTtable->update(key, this->searchID, TTtype::PV, value, -ply, best);
+                }
+                else if (value >= in_beta) {
+                    //note: 'black to move' = minimizing => upper bound = all node
+                    TTtable->update(key, this->searchID, TTtype::ALL, value, -ply, best);
+                }
+                else if (value <= in_alpha) {
+                    //note: 'black to move' = minimizing => lower bound = cut node
+                    TTtable->update(key, this->searchID, TTtype::CUT, value, -ply, best);
+                }
+                return value;
+            }
+        }
 	};
 
 	class Minimax
@@ -690,142 +745,6 @@ namespace chess::SearchAgents{
                 return value;
             }
 		}
-
-
-		template<class EvalAgent, bool side, bool quienscenceSearch>
-		int alphabeta(chess::ClassicBitBoard& board, int depth, Move& best) {
-			nodes = 0;
-			threefold = 0;
-			mates = 0;
-			draws = 0;
-			moves.resize(depth+1);
-			
-			int bestValue = side ? INT_MIN : INT_MAX;
-
-			if (depth == 0) {
-				if (quienscenceSearch) {
-					return Quiescence::quiescence<EvalAgent, side>(board, INT_MIN, INT_MAX);
-				}
-				else {
-					return EvalAgent::template eval<side>(board);
-				}				
-			}
-			board.generate_moves(moves[depth]);
-			int value = side ? INT_MIN : INT_MAX;
-			if (moves[depth].empty()) //No more moves=terminal node
-			{
-				if (board.isCheck<side>()) {
-					mates++;
-					return side ? -mate_Value-depth : mate_Value+depth; //MATE
-				}
-				else {
-					draws++;
-					return 0; //DRAW
-				}
-			}
-			if (board.isThreeFold()) {
-				threefold++;
-				//return draw_value; //Still do search to find best possible move, uci requires a valid move to be returned, no return on root of search lvl!
-			}		
-			int alpha = INT_MIN;
-			int beta = INT_MAX;
-			if (side) {
-				for (Move& m : moves[depth]) {
-					board.makeMove(m); nodes++;
-					value = std::max(value, alphabeta<EvalAgent, !side, quienscenceSearch>(board, depth - 1, alpha, beta));
-					board.undoMove();
-					//std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-					if (value > bestValue) {
-						best.flags = m.flags;
-						best.from = m.from;
-						best.to = m.to;
-						best.IsWhite = m.IsWhite;
-						bestValue = value;
-					}
-					if (value >= beta) {
-						break;
-					}
-					alpha = std::max(alpha, value);
-				}
-                return value;
-			}
-			else {
-				for (Move& m : moves[depth]) {
-					board.makeMove(m); nodes++;
-					value = std::min(value, alphabeta<EvalAgent, !side, quienscenceSearch>(board, depth - 1, alpha, beta));
-					board.undoMove();
-					//std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-					if (value < bestValue) {
-						best.flags = m.flags;
-						best.from = m.from;
-						best.to = m.to;
-						best.IsWhite = m.IsWhite;
-						bestValue = value;
-					}					
-					if (value <= alpha) {
-						break;
-					}
-					beta = std::min(beta, value);
-				}
-                return value;
-			}
-		};
-		template<class EvalAgent, bool side, bool quienscenceSearch>
-		int alphabeta(chess::ClassicBitBoard& board, int depth, int alpha, int beta) {
-			if (depth == 0) {
-				if (quienscenceSearch) {
-					return Quiescence::quiescence<EvalAgent, side>(board, INT_MIN, INT_MAX);
-				}
-				else {
-					return EvalAgent::template eval<side>(board);
-				}
-			}
-			//std::vector<Move> moves;
-			moves[depth].clear();
-			board.generate_moves(moves[depth]);
-			int value = side ? INT_MIN : INT_MAX;
-			if (moves[depth].empty()) //No more moves=terminal node
-			{
-				if (board.isCheck<side>()) {
-					mates++;
-					return side ? -mate_Value-depth : mate_Value+depth; //MATE
-				}
-				else {
-					draws++;
-					return 0; //DRAW
-				}
-			}
-			if (board.isThreeFold()) {
-				threefold++;
-				return draw_value;
-			}
-			if (side) {
-				for (Move& m : moves[depth]) {
-					board.makeMove(m); nodes++;
-					value = std::max(value, alphabeta<EvalAgent, !side, quienscenceSearch>(board, depth - 1, alpha, beta));
-					board.undoMove();
-					//std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-					if (value >= beta) {
-						break;
-					}
-					alpha = std::max(alpha, value);
-				}
-				return value;
-			}
-			else {
-				for (Move& m : moves[depth]) {
-					board.makeMove(m); nodes++;
-					value = std::min(value, alphabeta<EvalAgent, !side, quienscenceSearch>(board, depth - 1, alpha, beta));
-					board.undoMove();
-					//std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-					if (value <= alpha) {
-						break;
-					}
-					beta = std::min(beta, value);
-				}
-				return value;
-			}
-		}
 	};
 	class IttAlphaBeta {
 		Polyglot book;		
@@ -1056,15 +975,14 @@ namespace chess::SearchAgents{
 			Move firstMove;
 			if (tablehit) {
 				tableHits++;
+                firstMove = TTtable.move(key, this->searchID);
 				//if (entry.depth >= depth) { //Already computed
 				if (TTtable.depth(key, this->searchID) >= depth) { //Already computed
 					//if (entry.type == TTtype::PV) { //Knuth's Type 1
 					chess::TTtype type = TTtable.type(key, this->searchID);
 					int eval = TTtable.eval(key, this->searchID);
-					best = TTtable.move(key, this->searchID);
+					best = firstMove;
 					if (type == TTtype::PV) { //Knuth's Type 1
-						//best = entry.move;
-						//return entry.eval;
 						return eval;
 					}
 					else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
@@ -1085,7 +1003,6 @@ namespace chess::SearchAgents{
 						std::cout << "Something went wrong????" << std::endl;
 					}
 				}
-				firstMove = TTtable.move(key, this->searchID);
 			}
 			board.generate_moves(moves[depth]);
 			if (moves[depth].empty()) //No more moves=terminal node
@@ -1337,7 +1254,6 @@ namespace chess::SearchAgents{
             bestMove = moves[0][0]; //Already checked this value is >= 1!
             ponder = Move();
 
-            //TODO: implement PVsearch!
             //No early stop conditions => start alpha beta search
             limits.nextItt();
             Move searchMove = bestMove; //no empty move!
@@ -1412,12 +1328,12 @@ namespace chess::SearchAgents{
             Move firstMove;
             if (tablehit) {
                 tableHits++;
-                //if (entry.depth >= depth) { //Already computed
+                firstMove = TTtable.move(key, this->searchID);
                 if (TTtable.depth(key, this->searchID) >= depth) { //Already computed
                     //if (entry.type == TTtype::PV) { //Knuth's Type 1
                     chess::TTtype type = TTtable.type(key, this->searchID);
                     int eval = TTtable.eval(key, this->searchID);
-                    bestMove = TTtable.move(key, this->searchID);
+                    bestMove = firstMove;
                     if (type == TTtype::PV) { //Knuth's Type 1
                         return eval;
                     }
@@ -1439,7 +1355,6 @@ namespace chess::SearchAgents{
                         std::cout << "Something went wrong????" << std::endl;
                     }
                 }
-                firstMove = TTtable.move(key, this->searchID);
             }
 
             //check if node is terminal
@@ -1592,26 +1507,21 @@ namespace chess::SearchAgents{
 
             //probe transposition table
             uint64_t key = ClassicBitBoard::HashUtil::createHash(board);
-            //bool tablehit = TTtable.get(key, entry, depth);
             bool tablehit = TTtable.contains(key);
             Move firstMove;
             Move best;
             if (tablehit) {
                 tableHits++;
-                //if (entry.depth >= depth) { //Already computed
+                firstMove = TTtable.move(key, this->searchID);
                 if (TTtable.depth(key, this->searchID) >= depth) { //Already computed
                     //if (entry.type == TTtype::PV) { //Knuth's Type 1
                     chess::TTtype type = TTtable.type(key, this->searchID);
                     int eval = TTtable.eval(key, this->searchID);
-                    best = TTtable.move(key, this->searchID);
+                    best = firstMove;
                     if (type == TTtype::PV) { //Knuth's Type 1
-                        //best = entry.move;
-                        //return entry.eval;
                         return eval;
                     }
                     else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
-                        //alpha = entry.eval;
-                        //best = entry.move;
                         if (side){
                             if (eval >= beta) { return eval; }
                         }else{
@@ -1619,8 +1529,6 @@ namespace chess::SearchAgents{
                         }
                     }
                     else if (type == TTtype::ALL) { //Knuth's Type 3 = upper bound
-                        //beta = entry.eval;
-                        //best = entry.move;
                         if (side){
                             if (eval <= alpha) { return eval; }
                         }else{
@@ -1631,7 +1539,6 @@ namespace chess::SearchAgents{
                         std::cout << "Something went wrong????" << std::endl;
                     }
                 }
-                firstMove = TTtable.move(key, this->searchID);
             }
             board.generate_moves(moves[depth]);
             if (moves[depth].empty()) //No more moves=terminal node

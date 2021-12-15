@@ -8,7 +8,7 @@ namespace chess{
 		uint64_t hash = 0;
 		chess::Move move;
 		uint8_t ID = 0;
-		uint8_t depth = 255;
+		int depth = INT_MAX;
 		int eval = 0;
 		TTtype type = TTtype::None;
 		//possible? => evaluated if they are usefull
@@ -24,7 +24,7 @@ namespace chess{
 		uint64_t collisions = 0;
 		uint64_t entries = 0;
 		uint64_t pvloss = 0;
-        int mask = 0; //Mask to compute index
+        uint64_t mask = 0; //Mask to compute index
 	public:
 		TranspositionTable();
 		/// <summary>
@@ -132,10 +132,10 @@ namespace chess{
 		}
 
 
-		uint64_t getCollisions(){ return this->collisions; }
-		uint64_t getpvloss(){ return this->pvloss; }
+		uint64_t getCollisions() const{ return this->collisions; }
+		uint64_t getpvloss() const{ return this->pvloss; }
 		void clearCollisions() { collisions = 0; pvloss = 0; }
-		uint64_t getEntries(){ return this->entries; }
+		uint64_t getEntries() const{ return this->entries; }
 		size_t size() { return TTable.size(); }
 		
 	};
