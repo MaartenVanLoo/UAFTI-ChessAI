@@ -168,6 +168,7 @@ namespace chess::SearchAgents{
         uint64_t mates;
         uint64_t draws;
 
+
         //help objects
         std::vector<std::vector<Move>> moves;
         std::stringstream logFile;
