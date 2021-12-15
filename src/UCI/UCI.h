@@ -29,7 +29,8 @@ namespace UCI {
 		//chess::SearchAgents::AlphaBeta searchAgent;
 		//chess::SearchAgents::IttAlphaBeta searchAgent;
 		chess::SearchAgents::PVS searchAgent;
-		chess::BetterAgent evalAgent;
+		//chess::BetterAgent evalAgent;
+		chess::ONNXAgent evalAgent;
 		UCIOptions options;
 		chess::Move bestmove;
 		chess::Move ponder;

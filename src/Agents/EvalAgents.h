@@ -1,6 +1,7 @@
 #pragma once
 #include "../chess/ClassicBitBoard.h"
 #include <iostream>
+#include <onnxruntime_cxx_api.h>
 
 namespace chess {
 	class SimpleAgent
@@ -474,5 +475,155 @@ namespace chess {
 
 	
 	};
+
+	class ONNXEvaluator{
+    private:
+        Ort::Env env;
+        Ort::SessionOptions session_options{nullptr};
+        Ort::Session session_{nullptr};
+
+        Ort::Value input_tensor_{nullptr};
+        std::array<int64_t, 2> input_shape_{1, 784};
+
+        Ort::Value output_tensor_{nullptr};
+        std::array<int64_t, 2> output_shape_{1, 1};
+
+        Ort::MemoryInfo memory_info = Ort::MemoryInfo::CreateCpu(OrtDeviceAllocator, OrtMemTypeCPU);
+    public:
+        std::array<float,784> board_tensor_{};
+        std::array<float, 1> results_{};
+        int result_{0};
+
+        ONNXEvaluator(){
+            session_options = Ort::SessionOptions();
+            session_options.SetGraphOptimizationLevel(static_cast<GraphOptimizationLevel>(2));
+            session_ = Ort::Session{env, L"ChessAI.onnx", Ort::SessionOptions{nullptr}};
+        }
+
+        int forward(){
+            const char* input_names[] = {"input"};
+            const char* output_names[] = {"output"};
+            input_tensor_ = Ort::Value::CreateTensor<float>(memory_info, board_tensor_.data(), board_tensor_.size(), input_shape_.data(), input_shape_.size());
+            output_tensor_ = Ort::Value::CreateTensor<float>(memory_info, results_.data(), results_.size(), output_shape_.data(), output_shape_.size());
+
+            session_.Run(Ort::RunOptions{nullptr}, input_names, &input_tensor_, 1, output_names, &output_tensor_, 1);
+            result_ = (int)results_[0];
+            return result_;
+        }
+	};
+
+	class ONNXAgent{
+	public:
+	    ONNXEvaluator agent;
+        int eval(ClassicBitBoard&brd){
+            boardToTensor(brd,agent.board_tensor_);
+            return agent.forward();
+        }
+        template<bool side>
+        static int eval(ClassicBitBoard& brd){
+            ONNXEvaluator agent;
+             boardToTensor(brd,agent.board_tensor_);
+            return agent.forward();
+	    }
+	private:
+        static void boardToTensor(ClassicBitBoard& board,std::array<float,784>&tensor){
+            tensor.fill(0);
+            uint64_t blackPawns = board.BPawn;
+            uint64_t blackRooks = board.BRook;
+            uint64_t blackBishops = board.BBishop;
+            uint64_t blackKnights = board.BKnight;
+            uint64_t blackQueens = board.BQueen;
+            uint64_t blackKings = board.BKing;
+            uint64_t whitePawns = board.WPawn;
+            uint64_t whiteRooks = board.WRook;
+            uint64_t whiteBishops = board.WBishop;
+            uint64_t whiteKnights = board.WKnight;
+            uint64_t whiteQueens = board.WQueen;
+            uint64_t whiteKings = board.WKing;
+
+            uint64_t sq;
+            // blackpawns
+            Bitloop(blackPawns){
+                sq = SquareOf(blackPawns);
+                tensor[0+sq] = 1;
+            }
+            // blackRooks
+            Bitloop(blackRooks) {
+                sq = SquareOf(blackRooks);
+                tensor[64 + sq] = 1;
+            }
+            // blackBishops
+            Bitloop(blackBishops){
+                sq = SquareOf(blackBishops);
+                tensor[128+sq] = 1;
+            }
+            // blackKnights
+            Bitloop(blackKnights){
+                sq = SquareOf(blackKnights);
+                tensor[192+sq] = 1;
+            }
+            // blackQueens
+            Bitloop(blackQueens){
+                sq = SquareOf(blackQueens);
+                tensor[256+sq] = 1;
+            }
+            // blackKings
+            Bitloop(blackKings){
+                sq = SquareOf(blackKings);
+                tensor[320+sq] = 1;
+            }
+            // whitePawns
+            Bitloop(whitePawns){
+                sq = SquareOf(whitePawns);
+                tensor[384+sq] = 1;
+            }
+            // whiteRooks
+            Bitloop(whiteRooks){
+                sq = SquareOf(whiteRooks);
+                tensor[448+sq] = 1;
+            }
+            // whiteBishops
+            Bitloop(whiteBishops){
+                sq = SquareOf(whiteBishops);
+                tensor[512+sq] = 1;
+            }
+            // whiteKnights
+            Bitloop(whiteKnights){
+                sq = SquareOf(whiteKnights);
+                tensor[576+sq] = 1;
+            }
+            // whiteQueens
+            Bitloop(whiteQueens){
+                sq = SquareOf(whiteQueens);
+                tensor[640+sq] = 1;
+            }
+            // whiteKings
+            Bitloop(whiteKings){
+                sq = SquareOf(whiteKings);
+                tensor[704+sq] = 1;
+            }
+
+            // castling
+            if (board.state.BCastleL) tensor[768] = 1;
+            if (board.state.BCastleR) tensor[769] = 1;
+            if (board.state.WCastleL) tensor[770] = 1;
+            if (board.state.WCastleR) tensor[771] = 1;
+
+            // ep
+            if (board.state.hasEP){
+                int file = (int)(SquareOf(board.EnPassantTarget) % 8);
+                tensor[772 + file] = 1; // h file = 0; a file = 7;
+            }
+            tensor[780] = (int)board.halfmoves;
+            if (board.side){
+                tensor[782] = 0;
+                tensor[783] = 1;
+            }else{
+                tensor[782] = 1;
+                tensor[783] = 0;
+            }
+        }
+	};
+
 }
 

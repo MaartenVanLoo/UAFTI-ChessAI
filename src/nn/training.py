@@ -52,8 +52,66 @@ def evalAgentTraining(options:Options,dataloader:torch.utils.data.DataLoader):
         torch.save(agent.state_dict(), f"State{epoch+1}.model")
         torch.save(agent, f"State{epoch+1}.pt")
 
+def toONNX(path):
+    #load model parameters
+    params = torch.load(path)
+    print(params)
+
+    #make agent
+    options = Options();
+    agent = EvalAgent(options);
+
+    #set weights
+    agent.layer1[0].weight = torch.nn.Parameter(params[0])
+    agent.layer1[0].bias = torch.nn.Parameter(params[1])
+    agent.layer2[0].weight = torch.nn.Parameter(params[2])
+    agent.layer2[0].bias = torch.nn.Parameter(params[3])
+    agent.layer3[0].weight = torch.nn.Parameter(params[4])
+    agent.layer3[0].bias = torch.nn.Parameter(params[5])
+    #agent.layer4[0].weight = torch.nn.Parameter(params[6])
+    #agent.layer4[0].bias = torch.nn.Parameter(params[7])
+
+    #check result of pseudo random tensor:
+    randomTensor = torch.load("random.tensor")
+    print(randomTensor)
+    device= torch.device("cpu")
+    randomTensor[0] = randomTensor[0].to(device)
+    agent = agent.to(device)
+    result = agent(randomTensor[0])
+    print(result)
+    print(randomTensor[1])
+    if (torch.eq(result,randomTensor[1]).data):
+        print("Result correct")
+    else:
+        print("Something went wrong?")
+
+    # set the model to inference mode
+    agent.eval()
+
+    # input to the model
+    x = torch.randn(1,784,requires_grad  = True)
+    torch_out = agent(x)
+
+    #export the model
+    torch.onnx.export(agent,
+                      x,
+                      "ChessAI.onnx",
+                      training=torch.onnx.TrainingMode.EVAL,
+                      export_params = True,
+                      opset_version = 13,
+                      input_names = ['input'],
+                      output_names = ['output'],
+                      dynamic_axes={'input': {0: 'batch_size'},  # variable length axes
+                                    'output': {0: 'batch_size'}}
+    )
+
+
 
 if __name__ == "__main__":
+    path = "model01.param"
+    toONNX(path)
+    quit();
+
     now=datetime.now()
     print(('%02d:%02d:%02d.%06d'%(now.hour,now.minute,now.second,now.microsecond))[:-3])
     options = Options()
@@ -64,11 +122,11 @@ if __name__ == "__main__":
     datasets = []
     for batch in batches:
         datasets.append(ChessDataset(
-            #"C:/Universiteit/5-Artificiele_Intelligentie/Practicum4/UA_ChessAI_Project"
-            "D:/Documenten/Universiteit/5-AI"
+            "C:/Universiteit/5-Artificiele_Intelligentie/Practicum4/UA_ChessAI_Project"
+            #"D:/Documenten/Universiteit/5-AI"
                                      "/ChessData", batch, options))
     concatDataSets = torch.utils.data.ConcatDataset(datasets)
-    data = torch.utils.data.DataLoader(datasets[0],batch_size = 128,shuffle=True, num_workers = 3,pin_memory=True,
+    data = torch.utils.data.DataLoader(datasets[0],batch_size = 128,shuffle=True, num_workers = 4,pin_memory=True,
                                        persistent_workers=True)
     #f = open('C:/Universiteit/5-Artificiele_Intelligentie/Practicum4/UA_ChessAI_Project/ChessData/FEN/FenBatch00.txt','r')
     #print(f.readline())

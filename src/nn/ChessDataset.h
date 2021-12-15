@@ -12,10 +12,14 @@
 
 class ChessDataset : public torch::data::Dataset<ChessDataset>{
 private:
-    std::vector<std::string> fen;
-    std::vector<int> eval;
     std::string path,fenFile, evalFile;
 public:
+    std::vector<std::string> fen;
+    std::vector<int> eval;
+
+    ChessDataset(){
+
+    }
     ChessDataset(const std::string& path, int index) : path(path){
         std::ifstream fenstream;
         std::ifstream evalstream;
@@ -42,7 +46,7 @@ public:
 
         //load data:
         std::string fenData,evalData;
-        while (fenstream >> fenData){
+        while (std::getline(fenstream,fenData)){
             evalstream >> evalData;
 
             //parse eval value:
@@ -53,15 +57,20 @@ public:
             else if (evalData.find("(c)") != std::string::npos) {
                 evalData = evalData.substr(4);
             }
-            this->fen.push_back(evalData);
-            this->eval.push_back(std::stod(evalData));
+            double value = std::stod(evalData);
+            fenData.shrink_to_fit(); //Avoid to much memory reserved for string;
+            this->fen.push_back(fenData);
+            this->eval.push_back((int)(value*100));
         }
+        this->fen.shrink_to_fit();
+        this->eval.shrink_to_fit();
     }
 
     ExampleType get(size_t index) override {
+        //std::cout << this->fen[index]<<std::endl;
         chess::ClassicBitBoard board = chess::ClassicBitBoard(this->fen[index]);
         torch::Tensor input = ChessAIModel::boardToTensor(board);
-        torch::Tensor output = torch::zeros({1});
+        torch::Tensor output = torch::zeros(1);
         output[0] = this->eval[index];
         return {input,output};
     }
@@ -69,8 +78,37 @@ public:
     torch::optional<size_t> size() const override {
         return fen.size();
     }
+
+    void split(ChessDataset& training, ChessDataset& validation,double validationPart){
+        size_t validationSize = this->fen.size()*validationPart;
+        size_t trainingSize = this->fen.size()-validationSize;
+
+        torch::data::samplers::RandomSampler random(this->fen.size());
+        std::vector<size_t> validationIndex = random.next(validationSize).value();
+        std::sort(validationIndex.begin(),validationIndex.end());
+
+        training.fen.reserve(trainingSize);
+        training.eval.reserve(trainingSize);
+        validation.fen.reserve(validationSize);
+        validation.eval.reserve(validationSize);
+
+        auto validationIterator = validationIndex.begin();
+        for (int i = 0; i < this->fen.size(); i++){
+            if (*validationIterator == i){
+                validation.fen.push_back(this->fen[i]);
+                validation.eval.push_back(this->eval[i]);
+                validationIterator++;
+            }else{
+                training.fen.push_back(this->fen[i]);
+                training.eval.push_back(this->eval[i]);
+            }
+        }
+        //When done => clear this fen and eval;
+        this->fen.clear();
+        this->fen.shrink_to_fit();
+        this->eval.clear();
+        this->eval.shrink_to_fit();
+    }
 };
-
-
 
 #endif //UAFTI_CHESSAI_CHESSDATASET_H

@@ -13,7 +13,7 @@ class EvalAgent(nn.Module):
             include the input and output as well).
         """
         self.options=Options
-        self.options.hidden_sizes = [784, 512, 32, 32,1]
+        self.options.hidden_sizes = [784, 128, 64, 1]
         self.layer1 = nn.Sequential(
             torch.nn.Linear(self.options.hidden_sizes[0], self.options.hidden_sizes[1]),
             torch.nn.ReLU()
@@ -23,12 +23,12 @@ class EvalAgent(nn.Module):
             torch.nn.ReLU()
         )
         self.layer3 = nn.Sequential(
-            torch.nn.Linear(self.options.hidden_sizes[2], self.options.hidden_sizes[3]),
-            torch.nn.Softplus(beta=2,threshold=10)
+            torch.nn.Linear(self.options.hidden_sizes[2], self.options.hidden_sizes[3])
+            #torch.nn.ReLU()
         )
-        self.layer4 = nn.Sequential(
-            torch.nn.Linear(self.options.hidden_sizes[3], self.options.hidden_sizes[4]),
-        )
+        #self.layer4 = nn.Sequential(
+        #    torch.nn.Linear(self.options.hidden_sizes[3], self.options.hidden_sizes[4]),
+        #)
         """END TODO"""
 
     def forward(self, x: torch.Tensor):
@@ -36,6 +36,6 @@ class EvalAgent(nn.Module):
         x = self.layer1(x)
         x = self.layer2(x)
         x = self.layer3(x)
-        x = self.layer4(x)
+       # x = self.layer4(x)
         """END TODO"""
         return x

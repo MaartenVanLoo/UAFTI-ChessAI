@@ -24,10 +24,11 @@ message(Prefix: ${CMAKE_PREFIX_PATH})
 find_package(Torch REQUIRED)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${TORCH_CXX_FLAGS}")
 
-add_executable(example-app libtorch.cpp evalModel.cpp ChessDataloader.cpp ChessAIModel.cpp ${AIlist})
+add_executable(example-app libtorch.cpp evalModel.cpp ChessAIModel.cpp ChessAITrainer.cpp ../chess/ClassicBitBoard.cpp)
 target_link_libraries(example-app "${TORCH_LIBRARIES}")
 if(MSVC)
     target_compile_options(example-app PRIVATE /W0)
+    target_compile_options(example-app PUBLIC /wd4624) #disable warning for torch::optional
 endif()
 set_property(TARGET example-app PROPERTY CXX_STANDARD 17)
 
@@ -42,3 +43,20 @@ if (MSVC)
             ${TORCH_DLLS}
             $<TARGET_FILE_DIR:example-app>)
 endif (MSVC)
+
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+    target_compile_options(example-app  PRIVATE
+            $<$<CXX_COMPILER_ID:MSVC>:/W0 /WX- /Oi /Ot /O2 /Zi /GL /MP>
+            $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic -O3>)
+    target_link_options(example-app PRIVATE "$<$<CONFIG:Release>:/DEBUG>")
+    target_link_options(example-app PRIVATE "$<$<CONFIG:Release>:/OPT:REF>")
+    target_link_options(example-app PRIVATE "$<$<CONFIG:Release>:/OPT:ICF>")
+    target_link_options(example-app PRIVATE "$<$<CONFIG:Release>:/ZC:inline>")
+    target_link_options(example-app PRIVATE "$<$<CONFIG:Release>:/sdl>")
+
+    #enable profiling option for visual studio
+    SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/PROFILE")
+    SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/DEBUG")
+endif()
+
+

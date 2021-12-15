@@ -64,7 +64,7 @@ class ChessDataset(Dataset):
         if (self.eval[idx][0] == '('):
             if ("(m)" in self.eval[idx]):
                 self.eval[idx] = "0" #WARNING => PLEASE REMOVE ALREADY IN GENEATION OF DATA!
-            elif("(c" in self.eval[idx]):
+            elif("(c)" in self.eval[idx]):
                 self.eval[idx] = self.eval[idx][4::]
         output = torch.Tensor([int(float(self.eval[idx])*100)])
         """Cat 2 """

@@ -7,7 +7,7 @@
 #include <torch/torch.h>
 #include "../chess/ClassicBitBoard.h"
 
-class ChessAIModel {
+class ChessAIModel : public torch::nn::Module{
 public:
     static torch::Tensor boardToTensor(chess::ClassicBitBoard& board) {
         torch::Tensor tensor = torch::zeros(784);
@@ -107,6 +107,11 @@ public:
         }
         return tensor;
     }
+    const int layerNodes[5] = {784,128,64,1};
+    torch::nn::Sequential f1{nullptr}, f2{nullptr}, f3{nullptr};//, f4{nullptr};
+    ChessAIModel();
+    torch::Tensor forward(torch::Tensor x);
+    void saveParameters(std::string& filename);
 };
 
 

@@ -103,8 +103,9 @@ void UCI::UCI::init()
 {
 	board = chess::ClassicBitBoard(chess::ClassicBitBoard::startpos);
 	searchAgent = chess::SearchAgents::PVS();
-	evalAgent = chess::BetterAgent();
-	options = UCIOptions();	
+	//evalAgent = chess::BetterAgent();
+	evalAgent = chess::ONNXAgent();
+	options = UCIOptions();
 	book = chess::Polyglot(this->polyglotBook);
 	bookPonder = chess::PolyglotPonder(book);
 	searchAgent.setBook(book);
@@ -142,32 +143,7 @@ void UCI::UCI::go(std::istringstream& is)
 	}
 	else {	
 		int value;
-		/*
-		uint64_t key = chess::ClassicBitBoard::HashUtil::createHash(board);
-		if (this->book.getMove(key, bestmove, board)) {
-			//std::cout << "info: theory hit" << std::endl;
-			this->ponder = chess::Move();
-			//get eval to return this value
-			board.makeMove(bestmove);
-			value = this->board.side ? chess::BetterAgent::eval<true>(board) : chess::BetterAgent::eval<false>(board);
-			board.undoMove();
-		}
-		// else => search tree
-		else {			
-			//std::cout << "info: theory miss" << std::endl;
-			if (this->board.side)
-				value = searchAgent.alphabeta<chess::BetterAgent, true>(this->board, depth, this->bestmove, this->ponder);
-			else
-				value = searchAgent.alphabeta<chess::BetterAgent, false>(this->board, depth, this->bestmove, this->ponder);
-		}*/		
-		
-		/*std::cout << "info depth " << depth
-			<< " nodes " << searchAgent.nodes
-			<< " nps " << (long long unsigned)(searchAgent.nodes * 1e6) / elapsedmicroseconds
-			<< " mates " << searchAgent.mates
-			<< " time " << elapsedmilliseconds
-			<< std::endl;*/
-		value = searchAgent.search<chess::BetterAgent>(board, bestmove, ponder);
+		value = searchAgent.search<chess::ONNXAgent>(board, bestmove, ponder);
 		std::cout << "bestmove " << bestmove.toLAN() << " ponder " << ponder.toLAN() << std::endl;
 		if (debug) {
 			logFile << searchAgent.logFile.str();

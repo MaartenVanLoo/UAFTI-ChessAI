@@ -1197,6 +1197,7 @@ namespace chess::SearchAgents{
 
     class PVS{
         Polyglot book;
+        chess::ONNXAgent evalAgent;
     public:
         // counters
         uint8_t searchID = 0; //increment every time a new search is started, overflow at the end => not a problem.
@@ -1266,7 +1267,8 @@ namespace chess::SearchAgents{
                 ponder = chess::Move();
                 //get eval to return this value
                 board.makeMove(bestMove);
-                value = board.side ? EvalAgent::eval<true>(board) : EvalAgent::eval<false>(board);
+                //value = board.side ? EvalAgent::eval<true>(board) : EvalAgent::eval<false>(board);
+                value = evalAgent.eval(board);
                 board.undoMove();
                 return value;
             }
@@ -1288,7 +1290,8 @@ namespace chess::SearchAgents{
                 bestMove = moves[0][0];
                 ponder = chess::Move();
                 board.makeMove(bestMove);
-                value = board.side ? EvalAgent::eval<true>(board) : EvalAgent::eval<false>(board);
+                //value = board.side ? EvalAgent::eval<true>(board) : EvalAgent::eval<false>(board);
+                value = evalAgent.eval(board);
                 board.undoMove();
                 return value;
             }
@@ -1484,7 +1487,8 @@ namespace chess::SearchAgents{
                 for (Move &m : moves[depth]) {
                     board.makeMove(m);
                     if (depth <= 1) {
-                        value = EvalAgent::template eval<!side>(board);
+                        //value = EvalAgent::template eval<!side>(board);
+                        value = evalAgent.eval(board);
                         nodes++;
                     }
                     else if (bSearchPV) {
@@ -1532,7 +1536,8 @@ namespace chess::SearchAgents{
                 for (Move &m : moves[depth]) {
                     board.makeMove(m);
                     if (depth <= 1) {
-                        value = EvalAgent::template eval<!side>(board);
+                        //value = EvalAgent::template eval<!side>(board);
+                        value = evalAgent.eval(board);
                         nodes++;
                     }
                     else if (bSearchPV) {
@@ -1669,7 +1674,8 @@ namespace chess::SearchAgents{
                 for (Move& m : moves[depth]) {
                     board.makeMove(m);
                     if (depth <= 1) {
-                        value = std::max(value, EvalAgent::template eval<!side>(board));
+                        //value = std::max(value, EvalAgent::template eval<!side>(board));
+                        value = evalAgent.eval(board);
                         nodes++;
                     }
                     else {
