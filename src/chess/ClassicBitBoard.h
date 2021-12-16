@@ -901,6 +901,102 @@ namespace chess {
         friend std::ostream& operator<<(std::ostream& os, const ClassicBitBoard& brd);
         std::string toASCII();
 
+        template<bool IsWhite>
+        constexpr map Pawns_FirstRank() {
+            if constexpr (IsWhite) return Rank2;
+            else return Rank7;
+        }
+        template<bool IsWhite>
+        constexpr map Pawns_LastRank() {
+            if constexpr (IsWhite) return Rank7;
+            else return Rank2;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr bit King() {
+            if constexpr (IsWhite) return WKing;
+            else return BKing;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr bit EnemyKing()
+        {
+            if constexpr (IsWhite) return BKing;
+            else return WKing;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map Pawns() {
+            if constexpr (IsWhite) return WPawn;
+            else return BPawn;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map OwnColor()
+        {
+            if constexpr (IsWhite) return White;
+            return Black;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map Enemy()
+        {
+            if constexpr (IsWhite) return Black;
+            return White;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map EnemyRookQueen()
+        {
+            if constexpr (IsWhite) return BRook | BQueen;
+            return WRook | WQueen;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map RookQueen()
+        {
+            if constexpr (IsWhite) return WRook | WQueen;
+            return BRook | BQueen;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map EnemyBishopQueen()
+        {
+            if constexpr (IsWhite) return BBishop | BQueen;
+            return WBishop | WQueen;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map BishopQueen()
+        {
+            if constexpr (IsWhite) return WBishop | WQueen;
+            return BBishop | BQueen;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map EnemyOrEmpty()
+        {
+            if constexpr (IsWhite) return ~White;
+            return ~Black;
+        }
+        _InlineConstExpr map Empty()
+        {
+            return ~Occ;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map Knights()
+        {
+            if constexpr (IsWhite) return WKnight;
+            return BKnight;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map Rooks()
+        {
+            if constexpr (IsWhite) return WRook;
+            return BRook;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map Bishops()
+        {
+            if constexpr (IsWhite) return WBishop;
+            return BBishop;
+        }
+        template<bool IsWhite>
+        _InlineConstExpr map Queens()
+        {
+            if constexpr (IsWhite) return WQueen;
+            return BQueen;
+        }
     protected:
         void parse_fen(std::string);
         map fenToBmp(std::string& FEN, char piece);
@@ -1027,103 +1123,8 @@ namespace chess {
         _InlineConstExpr map Pawn_InvertRight(map mask) {
             return Pawn_AttackLeft<!IsWhite>(mask);
         }
-        template<bool IsWhite>
-        constexpr map Pawns_FirstRank() {
-            if constexpr (IsWhite) return Rank2;
-            else return Rank7;
-        }
-        template<bool IsWhite>
-        constexpr map Pawns_LastRank() {
-            if constexpr (IsWhite) return Rank7;
-            else return Rank2;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr bit King() {
-            if constexpr (IsWhite) return WKing;
-            else return BKing;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr bit EnemyKing()
-        {
-            if constexpr (IsWhite) return BKing;
-            else return WKing;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map Pawns() {
-            if constexpr (IsWhite) return WPawn;
-            else return BPawn;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map OwnColor()
-        {
-            if constexpr (IsWhite) return White;
-            return Black;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map Enemy()
-        {
-            if constexpr (IsWhite) return Black;
-            return White;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map EnemyRookQueen()
-        {
-            if constexpr (IsWhite) return BRook | BQueen;
-            return WRook | WQueen;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map RookQueen()
-        {
-            if constexpr (IsWhite) return WRook | WQueen;
-            return BRook | BQueen;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map EnemyBishopQueen()
-        {
-            if constexpr (IsWhite) return BBishop | BQueen;
-            return WBishop | WQueen;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map BishopQueen()
-        {
-            if constexpr (IsWhite) return WBishop | WQueen;
-            return BBishop | BQueen;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map EnemyOrEmpty()
-        {
-            if constexpr (IsWhite) return ~White;
-            return ~Black;
-        }
-        _InlineConstExpr map Empty()
-        {
-            return ~Occ;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map Knights()
-        {
-            if constexpr (IsWhite) return WKnight;
-            return BKnight;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map Rooks()
-        {
-            if constexpr (IsWhite) return WRook;
-            return BRook;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map Bishops()
-        {
-            if constexpr (IsWhite) return WBishop;
-            return BBishop;
-        }
-        template<bool IsWhite>
-        _InlineConstExpr map Queens()
-        {
-            if constexpr (IsWhite) return WQueen;
-            return BQueen;
-        }
-        
+
+    protected:
         /// <summary>
         /// Get the map of the file for a given square.
         /// </summary>
