@@ -2,12 +2,14 @@
 #include <iostream>
 
 chess::TranspositionTable::TranspositionTable() {
-	this->TTable.resize(32 * (1ull << 20) / sizeof(TTentry));
-	this->maxEntries = 32 * (1ull << 20) / sizeof(TTentry);
+    this->maxEntries = 1ull<<22;
+    this->mask = maxEntries -1;
+	this->TTable.resize(maxEntries);
 }
 chess::TranspositionTable::TranspositionTable(size_t tableSize)
 {
-	this->TTable.resize(tableSize * (1ull << 20) / sizeof(TTentry));
-	this->maxEntries = tableSize * (1ull << 20) / sizeof(TTentry);
+    this->maxEntries = 1ull<<22;
+    this->mask = maxEntries -1;
+	this->TTable.resize(maxEntries);
 }
 

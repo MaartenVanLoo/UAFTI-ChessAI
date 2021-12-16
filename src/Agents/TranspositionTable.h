@@ -8,7 +8,7 @@ namespace chess{
 		uint64_t hash = 0;
 		chess::Move move;
 		uint8_t ID = 0;
-		uint8_t depth = 255;
+		int depth = INT_MAX;
 		int eval = 0;
 		TTtype type = TTtype::None;
 		//possible? => evaluated if they are usefull
@@ -18,12 +18,13 @@ namespace chess{
 	
 	class TranspositionTable
 	{
+	private:
 		uint64_t maxEntries;
 		std::vector<TTentry> TTable;
 		uint64_t collisions = 0;
 		uint64_t entries = 0;
 		uint64_t pvloss = 0;
-
+        uint64_t mask = 0; //Mask to compute index
 	public:
 		TranspositionTable();
 		/// <summary>
@@ -93,7 +94,7 @@ namespace chess{
 		/// <param name="key">Hash value</param>
 		/// <returns></returns>
 		__forceinline bool contains(uint64_t key) {
-			uint64_t index = key % this->maxEntries;
+			uint64_t index = key & this->mask;
 			if (key != TTable[index].hash) {
 				return false;
 			}
@@ -106,7 +107,7 @@ namespace chess{
 		/// <param name="ID">search ID</param>
 		/// <returns></returns>
 		__forceinline bool contains(uint64_t key, uint8_t ID) {
-			uint64_t index = key % this->maxEntries;
+			uint64_t index = key & this->mask;
 			if (key != TTable[index].hash || ID != TTable[index].ID) {
 				return false;
 			}
@@ -115,61 +116,26 @@ namespace chess{
 		//next methods assumes key is present
 		__forceinline int eval(uint64_t key, uint8_t ID) {
 			//TTable[key % this->maxEntries].ID = ID;
-			return TTable[key % this->maxEntries].eval;
+			return TTable[key & this->mask].eval;
 		}
 		__forceinline int depth(uint64_t key, uint8_t ID) {
 			//TTable[key % this->maxEntries].ID = ID;
-			return TTable[key % this->maxEntries].depth;
+			return TTable[key & this->mask].depth;
 		}
 		__forceinline TTtype type(uint64_t key, uint8_t ID) {
 			//TTable[key % this->maxEntries].ID = ID;
-			return TTable[key % this->maxEntries].type;
+			return TTable[key & this->mask].type;
 		}
 		__forceinline Move move(uint64_t key, uint8_t ID) {
 			//TTable[key % this->maxEntries].ID = ID;
-			return TTable[key % this->maxEntries].move;
+			return TTable[key & this->mask].move;
 		}
-		/*__forceinline void update(uint64_t key, int eval, int depth, chess::Move& move) {
-			uint64_t index = key % this->maxEntries;
-			if (key != TTable[index].hash && TTable[index].hash != 0) {
-				this->collisions++;
-			}
-			// replacement scheme = always replace unless => new entyr has same key and lower depth
-			if (TTable[index].depth < depth && key == TTable[index].hash) {
-				TTable[index].eval = eval;
-				TTable[index].depth = depth;
-				TTable[index].move = move;
-			}
-			else {
-				TTable[index].hash = key;
-				TTable[index].eval = eval;
-				TTable[index].depth = depth;
-				TTable[index].move = move;
-				this->entries++;
-			}
-		}
-		__forceinline bool get(uint64_t key, TTentry& entry, int depth) {
-			uint64_t index = key % this->maxEntries;
-			if (key != TTable[index].hash) {
-				return false;
-			}
-			//if (depth > TTable[index].depth) return false; // node wasn't evaluated at current depth => this would invalidate the 'eval value' but won't invalidate the actual move
-			// depth check shouldn't happen in hash table
-			entry = TTable[index];
-			return true;
-		}
-		__forceinline void clear() {
-			TTable.clear();
-			this->TTable.resize(maxEntries);
-			this->collisions = 0;
-			this->entries = 0;
-		}*/
 
 
-		uint64_t getCollisions(){ return this->collisions; }
-		uint64_t getpvloss(){ return this->pvloss; }
+		uint64_t getCollisions() const{ return this->collisions; }
+		uint64_t getpvloss() const{ return this->pvloss; }
 		void clearCollisions() { collisions = 0; pvloss = 0; }
-		uint64_t getEntries(){ return this->entries; }
+		uint64_t getEntries() const{ return this->entries; }
 		size_t size() { return TTable.size(); }
 		
 	};

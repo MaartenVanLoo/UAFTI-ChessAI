@@ -750,8 +750,9 @@ namespace chess {
         inline void makeMove(const Move &move);
         //template<BoardPiece piece, bool white, bool castleL, bool castleR, bool EP>
         inline bool undoMove();
+        void generate_capture_moves(std::vector<Move> &moves);
         void generate_moves(std::vector<Move> &moves);
-        
+
         std::string getFen();
         bool LAN2Move(const std::string& lan, Move& move);
         bool Move2LAN(const Move& move, std::string& lan);
@@ -841,6 +842,51 @@ namespace chess {
             }
             
            
+        }
+        template<bool IsWhite>
+        _InlineConstExpr void isTerminal(bool& mate, bool&draw){
+            //similar to "generate moves"
+            constexpr bool white = IsWhite;
+            constexpr bool enemy = !IsWhite;
+            if (!checkStatusValid) { initCheckStatus<white>(); }
+
+            map checkmask = checkStatus;
+            map kingban = lookup::King(SquareOf(King<enemy>()));
+            map kingatk = Refresh<IsWhite>(kingban, checkmask);
+            if (checkmask == 0xffffffffffffffffull) {
+                if (_hasAtLeast1Move<white, false>(kingatk, kingban, checkmask)){
+                    //Not check and has at least 1 move => no mate,no draw
+                    mate= false;
+                    draw = false;
+                }else{
+                    //Not check but no moves = draw
+                    mate = false;
+                    draw = true;
+                }
+            }
+            else if (checkmask != 0) {
+                if (_hasAtLeast1Move<white, true>(kingatk, kingban, checkmask)){
+                    //check but has at least 1 move => no mate, no draw
+                    mate = false;
+                    draw = false;
+                }else{
+                    //check and no more moves = checkmate
+                    mate = true;
+                    draw = false;
+                }
+            }
+            else {
+                if (kingatk){
+                    //king in check but can move => no mate, no draw;
+                    draw = false;
+                    mate = false;
+                }
+                else {
+                    //king in check and can't move => mate;
+                    draw = false;
+                    mate = true;
+                }
+            }
         }
         bool isThreeFold() {
             int count = 0;
@@ -1020,9 +1066,133 @@ namespace chess {
         
         //Generate moves
         template<bool IsWhite>
+        inline void _generate_capture_moves(std::vector<Move>& moves);
+        template<bool IsWhite>
         inline void _generate_moves(std::vector<Move>& moves);
         template<bool IsWhite, bool inCheck>
-        __forceinline void __generate_moves(map kingatk, const map kingban, const map chekcmask, std::vector<Move>& moves);
+        __forceinline void __generate_capture_moves(map kingatk, const map kingban, const map Checkmask, std::vector<Move>& moves);
+        template<bool IsWhite, bool inCheck>
+        __forceinline void __generate_moves(map kingatk, const map kingban, const map Checkmask, std::vector<Move>& moves);
+
+        template<bool IsWhite, bool inCheck>
+        __forceinline bool _hasAtLeast1Move(map kingatk, const map kingban, const map Checkmask){
+            constexpr bool white = IsWhite;
+            uint64_t movecnt = 0;
+
+            const map pinHV = rookPin;
+            const map pinD12 = bishopPin;
+            const map checkmask = ConstCheckmask<inCheck>(Checkmask);
+            const map movableSquare = MoveableSquares<white, inCheck>(checkmask);
+            const map epTarget = EnPassantTarget;
+
+            //Pawns
+            {
+                const uint64_t pawnsLR = Pawns<white>() & ~pinHV;
+                const uint64_t pawnsHV = Pawns<white>() & ~pinD12;
+
+                //4 basic pawn moves
+                uint64_t Lpawns = pawnsLR & Pawn_InvertLeft<white>(Enemy<white>() & Pawns_NotRight() & checkmask);
+                uint64_t Rpawns = pawnsLR & Pawn_InvertRight<white>(Enemy<white>() & Pawns_NotLeft() & checkmask);
+                uint64_t Fpawns = pawnsHV & Pawn_Backward<white>(Empty());
+                uint64_t Ppawns = Fpawns & Pawns_FirstRank<white>() & Pawn_Backward2<white>(Empty() & checkmask);
+
+                Fpawns &= Pawn_Backward<white>(checkmask);
+
+                Pawn_PruneLeft<white>(Lpawns, pinD12);
+                Pawn_PruneRight<white>(Rpawns, pinD12);
+                Pawn_PruneMove<white>(Fpawns, pinHV);
+                Pawn_PruneMove2<white>(Ppawns, pinHV);
+
+                //Enpassant
+                if (state.hasEP) {
+                    bit EPLpawn = pawnsLR & Pawns_NotLeft() & ((epTarget & checkmask) >> 1);
+                    bit EPRpawn = pawnsLR & Pawns_NotRight() & ((epTarget & checkmask) << 1);
+
+                    if (EPLpawn | EPRpawn) {
+                        Pawn_PruneLeftEP<white>(EPLpawn, pinD12);
+                        Pawn_PruneRightEP<white>(EPRpawn, pinD12);
+                        if (EPLpawn) return true;
+                        if (EPRpawn) return true;
+                    }
+                }
+
+                if (Lpawns) return true;
+                if (Rpawns) return true;
+                if (Fpawns) return true;
+                if (Ppawns) return true;
+            }
+
+            //Knightmoves
+            {
+                map knights = Knights<white>() & ~(pinHV | pinD12);
+                Bitloop(knights) {
+                    const square sq = SquareOf(knights);
+                    map move = lookup::Knight(sq) & movableSquare;
+                    if (move) return true;
+                }
+            }
+
+            //bishops (and diag pinned queens)
+            const map queens = Queens<white>();
+            {
+                map bishops = Bishops<white>() & ~pinHV;
+
+                map bish_pinned = (bishops | queens) & pinD12;
+                map bish_nopin = bishops & ~pinD12;
+
+                Bitloop(bish_pinned) {
+                    const square sq = SquareOf(bish_pinned);
+                    map move = lookup::Bishop(sq, Occ) & movableSquare & pinD12;
+                    if (move) return true;
+                }
+                Bitloop(bish_nopin) {
+                    const square sq = SquareOf(bish_nopin);
+                    map move = lookup::Bishop(sq, Occ) & movableSquare;
+                    if (move) return true;
+                }
+            }
+
+            //Rookmoves (and horiz pinned queens)
+            {
+                map rooks = Rooks<white>() & ~pinD12;
+
+                map rook_pinned = (rooks | queens) & pinHV;
+                map rook_nopin = rooks & ~pinHV;
+                Bitloop(rook_pinned) {
+                    const square sq = SquareOf(rook_pinned);
+                    map move = lookup::Rook(sq, Occ) & movableSquare & pinHV;
+                    if (move) return true;
+                }
+                Bitloop(rook_nopin) {
+                    const square sq = SquareOf(rook_nopin);
+                    map move = lookup::Rook(sq, Occ) & movableSquare;
+                    if (move) return true;
+                }
+            }
+            //Queen moves
+            {
+                map queens = Queens<white>() & ~(pinHV | pinD12);
+                Bitloop(queens) {
+                    const square sq = SquareOf(queens);
+                    map atk = lookup::Queen(sq, Occ);
+                    map move = atk & movableSquare;
+                    if (move) return true;
+                }
+            }
+            //KingMoves (put last => lower priority when going over all the moves, other moves are probably better and can cause an earlier cut off
+            {
+                if (kingatk) return true;
+
+                //Castling
+                if constexpr (!inCheck) {
+                    if (state.canCastleLeft<white>(kingban, Occ, Rooks<white>()))  return true;
+                    if (state.canCastleRigth<white>(kingban, Occ, Rooks<white>()))  return true;
+                }
+            }
+
+            return false;
+        }
+
         template<bool IsWhite>
         __forceinline void initCheckStatus();
         template<bool IsWhite>

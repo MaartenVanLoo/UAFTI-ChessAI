@@ -480,7 +480,6 @@ namespace ClassicBitBoard_Test {
 	}
 	#pragma endregion
 
-
 	#pragma region SearchAgents
 	void logOutput(chess::SearchAgents::Minimax agent) {
 		std::cout << agent.nodes << std::endl;
@@ -665,4 +664,64 @@ namespace ClassicBitBoard_Test {
 		//FAIL();
 	}
 	#pragma endregion
+
+    #pragma region Capture moves
+    void filterMoves(chess::ClassicBitBoard& board, std::vector<chess::Move>& moves){
+	    auto vect = moves;
+	    moves.clear();
+	    for (auto&m : vect){
+	        if (board.side){
+                if (m.to & board.Black){
+                    moves.push_back(m);
+                }
+	        }else{
+                if (m.to & board.White){
+                    moves.push_back(m);
+                }
+	        }
+	    }
+	}
+    TEST(CaptureMoves, CaptureMoves){
+        chess::ClassicBitBoard board;
+        std::vector<std::string> vect = {
+                "r3k1r1/p1p2p1p/1pp5/2b5/3qPQn1/3P3P/PPP2PP1/RNB2RK1 b q - 0 14",
+                "r3kb1r/ppp2ppp/5n2/4n3/4PB2/2N3Pq/PPP2P1P/R2Q1RK1 b kq - 1 11",
+                "r3k1r1/p1p2p1p/1pp5/2b5/4PQn1/3q3P/PPP2PP1/RNB2RK1 w q - 0 15",
+                "r1q2rk1/pp1b2pp/2p1N3/4RPb1/1P6/P7/2P2PBP/R3Q1K1 b - - 2 22",
+                "r3kb1r/ppp2ppp/8/3nn3/4PB2/2N3Pq/PPP2P1P/R2Q1RK1 w kq - 2 12"
+        };
+        std::vector<int> expect = {
+                5,
+                4,
+                5,
+                2,
+                4
+        };
+        for (int i =0 ; i< vect.size(); i++) {
+            board.set(vect[i]);
+            std::vector<chess::Move> captures;
+            std::vector<chess::Move> moves;
+            board.generate_capture_moves(captures);
+            board.generate_moves(moves);
+
+            EXPECT_EQ(captures.size(), expect[i]) << vect[i];
+            //filter all moves:
+            filterMoves(board, moves);
+            EXPECT_EQ(moves.size(), expect[i]) << vect[i];
+            EXPECT_EQ(moves.size(), captures.size()) << vect[i];
+
+            for (auto &m: moves) {
+                bool found = false;
+                for (auto &c: captures) {
+                    if (m == c) {
+                        found = true;
+                    }
+                }
+                EXPECT_TRUE(found) << vect[i];
+            }
+        }
+
+
+	}
+    #pragma endregion
 }
