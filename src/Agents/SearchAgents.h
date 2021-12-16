@@ -84,33 +84,33 @@ namespace chess::SearchAgents{
             bool tablehit = TTtable->contains(key);
             Move firstMove;
             if (tablehit) {
+                //Every eval is oké => if eval from parant search (Depth > 0) => good, contains more information
+                // if eval from other qsearch (depth == -1) => also good, qsearch always searches until no more caputers thus reagardless of the current depth  the same three will be expanded
                 tableHits++;
                 firstMove = TTtable->move(key, this->searchID);
-                if (TTtable->depth(key, this->searchID) >= -ply) {
-                    // Already computed => note, qsearch depth can become negative! => negative depth = used for all
-                    // qsearch entries. Note => any entry for regular search outperformes the qsearch.
-                    chess::TTtype type = TTtable->type(key, this->searchID);
-                    int eval = TTtable->eval(key, this->searchID);
-                    if (type == TTtype::PV) { //Knuth's Type 1
-                        return eval;
+                // Already computed => note, qsearch depth can become negative! => negative depth = used for all
+                // qsearch entries. Note => any entry for regular search outperformes the qsearch.
+                chess::TTtype type = TTtable->type(key, this->searchID);
+                int eval = TTtable->eval(key, this->searchID);
+                if (type == TTtype::PV) { //Knuth's Type 1
+                    return eval;
+                }
+                else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
+                    if (side) {
+                        if (eval >= beta) { return eval; }
+                    }else{
+                        if (eval <= alpha){ return eval; }
                     }
-                    else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
-                        if (side) {
-                            if (eval >= beta) { return eval; }
-                        }else{
-                            if (eval <= alpha){ return eval; }
-                        }
+                }
+                else if (type == TTtype::ALL) { //Knuth's Type 3 = upper bound
+                    if (side){
+                        if (eval <= alpha) { return eval; }
+                    }else{
+                        if (eval >= beta) { return eval; }
                     }
-                    else if (type == TTtype::ALL) { //Knuth's Type 3 = upper bound
-                        if (side){
-                            if (eval <= alpha) { return eval; }
-                        }else{
-                            if (eval >= beta) { return eval; }
-                        }
-                    }
-                    else {
-                        std::cout << "Something went wrong????" << std::endl;
-                    }
+                }
+                else {
+                    std::cout << "Something went wrong????" << std::endl;
                 }
             }
 
@@ -118,9 +118,19 @@ namespace chess::SearchAgents{
             board.generate_capture_moves(moves[ply]);
             if (moves[ply].empty()) //No more moves=terminal node
             {
-                //Note => no mate check TODO: check if mate check can be implemented without generating all moves?
                 //Terminal node in q search => do evaluation;
-                return EvalAgent::template eval<!side>(board);
+                bool IsDraw;
+                bool IsMate;
+                board.side?board.isTerminal<true>(IsDraw,IsMate):board.isTerminal<false>(IsDraw,IsMate);
+                if (IsMate){
+                    mates++;
+                    return side? -mate_Value-depth:mate_Value+depth; //MATE
+                }else if (IsDraw){
+                    draws++;
+                    return draw_value; //DRAW
+                }else{
+                    return EvalAgent::template eval<!side>(board);
+                }
             }
 
             //Repetition
@@ -166,13 +176,13 @@ namespace chess::SearchAgents{
                     alpha = std::max(alpha, value);
                 }
                 if (value > in_alpha && value < in_beta) {
-                    TTtable->update(key, this->searchID, TTtype::PV, value, -ply, best);
+                    TTtable->update(key, this->searchID, TTtype::PV, value, -1, best);
                 }
                 else if (value >= in_beta) {
-                    TTtable->update(key, this->searchID, TTtype::CUT, value, -ply, best);
+                    TTtable->update(key, this->searchID, TTtype::CUT, value, -1, best);
                 }
                 else if (value <= in_alpha) {
-                    TTtable->update(key, this->searchID, TTtype::ALL, value, -ply, best);
+                    TTtable->update(key, this->searchID, TTtype::ALL, value, -1, best);
                 }
                 return value;
             }
@@ -197,15 +207,15 @@ namespace chess::SearchAgents{
                     beta = std::min(beta, value);
                 }
                 if (value > in_alpha && value < in_beta) {
-                    TTtable->update(key, this->searchID, TTtype::PV, value, -ply, best);
+                    TTtable->update(key, this->searchID, TTtype::PV, value, -1, best);
                 }
                 else if (value >= in_beta) {
                     //note: 'black to move' = minimizing => upper bound = all node
-                    TTtable->update(key, this->searchID, TTtype::ALL, value, -ply, best);
+                    TTtable->update(key, this->searchID, TTtype::ALL, value, -1, best);
                 }
                 else if (value <= in_alpha) {
                     //note: 'black to move' = minimizing => lower bound = cut node
-                    TTtable->update(key, this->searchID, TTtype::CUT, value, -ply, best);
+                    TTtable->update(key, this->searchID, TTtype::CUT, value, -1, best);
                 }
                 return value;
             }
