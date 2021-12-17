@@ -2413,9 +2413,20 @@ namespace chess {
         return lan;
     }
 
-    uint16_t chess::Move::compress(Move move)
+    void chess::Move::compress(Move &move,uint32_t &compressed)
     {
-        return uint16_t();
+        compressed = 0;
+        compressed ^= move.flags;       //Lowest half;
+        compressed ^= move.IsWhite << 31; //MSB
+        compressed ^= (uint8_t)(SquareOf(move.from)) << 16;
+        compressed ^= (uint8_t)(SquareOf(move.to))   << 24; //MAx 64 => MSB never written
+    }
+
+    void chess::Move::decompress(uint32_t& compressed, Move& move) {
+        move.flags = compressed & 0xFFFF;
+        move.from = 1ull << ((compressed >> 16) & 0xFF);
+        move.to   = 1ull << ((compressed >> 24) & 0x7F);
+        move.IsWhite = compressed >> 31;
     }
 
     bool operator==(const Move& move1, const Move& move2)
@@ -2426,7 +2437,9 @@ namespace chess {
         if (move1.flags != move2.flags) return false;
         return true;
     }
-    #pragma endregion
+
+
+#pragma endregion
 
     /**************************\
 

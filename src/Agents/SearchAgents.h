@@ -1658,7 +1658,7 @@ namespace chess::SearchAgents{
             }
         }
     };
-
+/*
     class PvsRazoring{
     //TODO:
     //-Uiterste depth te pakken zien te krijgen om startdepth te kunnen gebruiken bij razoring en om op depth -3 te kunnen razoren
@@ -2319,5 +2319,6 @@ namespace chess::SearchAgents{
                 }
             }
         }
+        */
 }
 

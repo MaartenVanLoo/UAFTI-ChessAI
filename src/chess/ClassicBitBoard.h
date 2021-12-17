@@ -78,8 +78,8 @@ namespace chess {
         Move(bool IsWhite, bit from, bit to,Flags flags);
         std::string toLAN();
         static std::string toLAN(const Move& move);
-        static uint16_t compress(Move move);
-        static Move decompress(uint16_t move);
+        static void compress(Move& move, uint32_t& compressed);
+        static void decompress(uint32_t& compressed, Move& move);
         friend bool operator== (const Move& move1, const Move& move2);
         friend std::ostream& operator<<(std::ostream& os, const Move& move) {
             os << Move::toLAN(move);

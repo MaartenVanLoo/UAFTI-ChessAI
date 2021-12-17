@@ -6,7 +6,8 @@ namespace chess{
 	enum class TTtype { PV, CUT, ALL, None};
 	struct TTentry {
 		uint64_t hash = 0;
-		chess::Move move;
+		//chess::Move move;
+		uint32_t move;
 		uint8_t ID = 0;
 		int depth = INT_MAX;
 		int eval = 0;
@@ -34,7 +35,7 @@ namespace chess{
 		TranspositionTable(size_t tableSize);
 		
 		
-		__forceinline void update(uint64_t key,uint8_t ID,TTtype type, int eval, int depth, chess::Move& move) {
+		__forceinline void update(uint64_t key,uint8_t ID,TTtype type, int eval, int depth, Move& move) {
 			uint64_t index = key % this->maxEntries;
 			if (key != TTable[index].hash && TTable[index].hash != 0) {
 				if (ID == TTable[index].ID) {
@@ -48,7 +49,7 @@ namespace chess{
                 //Update existing node
                 TTable[index].eval = eval;
                 TTable[index].depth = depth;
-                TTable[index].move = move;
+                Move::compress(move,TTable[index].move);
                 TTable[index].type = type;
                 TTable[index].ID = ID;
 			}
@@ -64,7 +65,7 @@ namespace chess{
 				TTable[index].hash = key;
 				TTable[index].eval = eval;
 				TTable[index].depth = depth;
-				TTable[index].move = move;
+                Move::compress(move,TTable[index].move);
 				TTable[index].type = type;
 				TTable[index].ID = ID;
 			}
@@ -128,7 +129,9 @@ namespace chess{
 		}
 		__forceinline Move move(uint64_t key, uint8_t ID) {
 			//TTable[key % this->maxEntries].ID = ID;
-			return TTable[key & this->mask].move;
+			Move move;
+			Move::decompress(TTable[key & this->mask].move, move);
+            return move;
 		}
 
 
