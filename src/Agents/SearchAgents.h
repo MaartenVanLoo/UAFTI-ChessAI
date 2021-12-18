@@ -1658,16 +1658,10 @@ namespace chess::SearchAgents{
             }
         }
     };
-/*
-    class PvsRazoring{
-    //TODO:
-    //-Uiterste depth te pakken zien te krijgen om startdepth te kunnen gebruiken bij razoring en om op depth -3 te kunnen razoren
-    //-Manier vinden om isRazoring globaal te doen werken.
-        //uitleg
-        //gebeurd op diepte 3
-        //wordt "geactiveerd" wanneer de statische waarde + een margin niet beter is dan alfa
-        //we verminderen de zoekdiepte met 1 (dus we zoeken maar tot diepte 2?..)
+
+    class PVSRazoring{
         Polyglot book;
+        bool defaultRazoring = false;
     public:
         // counters
         uint8_t searchID = 0; //increment every time a new search is started, overflow at the end => not a problem.
@@ -1688,11 +1682,6 @@ namespace chess::SearchAgents{
         UCI::Limits limits;
         bool twoFoldEnabled = true;
         bool threeFoldEnabled = true;
-
-        //razoring
-        //with razoring we need to search through the next few branches but one depth less
-        //so we need a way to see whether we see depth 0 as reaching the end or depth-2
-        bool defaultRazoring = false;
 
         void setBook(Polyglot& polyglot) {
             this->book = polyglot;
@@ -1812,7 +1801,6 @@ namespace chess::SearchAgents{
             bestMove = moves[0][0]; //Already checked this value is >= 1!
             ponder = Move();
 
-            //TODO: implement PVsearch!
             //No early stop conditions => start alpha beta search
             limits.nextItt();
             Move searchMove = bestMove; //no empty move!
@@ -1829,6 +1817,7 @@ namespace chess::SearchAgents{
                 else{
                     searchValue = pvsRazoring<EvalAgent,false>(board, depth, alpha, beta, searchMove);
                 }
+
                 if (limits.exceededTime()) {
                     // alpha beta search was terminated prematurely => results not complete
                     break;
@@ -1866,13 +1855,14 @@ namespace chess::SearchAgents{
             return value;
         }
     private:
-
         /// <summary>
         /// Principle variation search
         /// </summary>
         template<class EvalAgent, bool side>
         int pvsRazoring(ClassicBitBoard& board,int depth, int alpha, int beta, Move& bestMove){
             this->nodes++;
+            int razorMargin = 100; //Might want to change to vector(change margin for each depth)
+
 
             //if time limis is exceeded cuase the parent node to "CUT".
             //return "0" could cause undefined behavior (might be better compared to actual value)
@@ -1887,12 +1877,12 @@ namespace chess::SearchAgents{
             Move firstMove;
             if (tablehit) {
                 tableHits++;
-                //if (entry.depth >= depth) { //Already computed
+                firstMove = TTtable.move(key, this->searchID);
                 if (TTtable.depth(key, this->searchID) >= depth) { //Already computed
                     //if (entry.type == TTtype::PV) { //Knuth's Type 1
                     chess::TTtype type = TTtable.type(key, this->searchID);
                     int eval = TTtable.eval(key, this->searchID);
-                    bestMove = TTtable.move(key, this->searchID);
+                    bestMove = firstMove;
                     if (type == TTtype::PV) { //Knuth's Type 1
                         return eval;
                     }
@@ -1914,7 +1904,6 @@ namespace chess::SearchAgents{
                         std::cout << "Something went wrong????" << std::endl;
                     }
                 }
-                firstMove = TTtable.move(key, this->searchID);
             }
 
             //check if node is terminal
@@ -1967,11 +1956,22 @@ namespace chess::SearchAgents{
                         //First move in node => PV node
                         value = pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta, firstMove);
                     } else {
-                        value = zwSearch<EvalAgent,!side>(board, depth - 1, alpha,alpha + 1);
-                        if (value > alpha && value < beta) {
-                            // research
-                            value = pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta, firstMove);
+                        if(!defaultRazoring){
+                            value = std::max(value,zwSearch<EvalAgent, !side>(board, depth,alpha,beta));
+                            if(value + razorMargin < alpha){
+                                defaultRazoring = true;
+                                value = std::max(value,zwSearch<EvalAgent, !side>(board,depth - 2,alpha,beta));
+                            }else{
+                                value = zwSearch<EvalAgent,!side>(board, depth - 1, alpha,alpha + 1);
+                                if (value > alpha && value < beta) {
+                                    // research
+                                    value = pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta, firstMove);
+                                }
+                            }
+                        }else{//manier vinden om razoring uit te zetten...
+
                         }
+
                     }
                     board.undoMove();
                     if (value > bestValue) {
@@ -2014,12 +2014,21 @@ namespace chess::SearchAgents{
                     else if (bSearchPV) {
                         //First move in node => PV node
                         value =pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta,firstMove);
-                    }
                     } else {
-                        value = zwSearch<EvalAgent,!side>(board, depth - 1, beta-1,beta);
-                        if (value < beta && value > alpha) {
-                            // re-research
-                            value = pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta,firstMove);
+                        if(!defaultRazoring){
+                            value = std::max(value,zwSearch<EvalAgent, !side>(board, depth,alpha,beta));
+                            if(value - razorMargin > beta){
+                                defaultRazoring = true;
+                                value = std::max(value,zwSearch<EvalAgent, !side>(board,depth - 2,alpha,beta));
+                            }else{
+                                value = zwSearch<EvalAgent,!side>(board, depth - 1, beta-1,beta);
+                                if (value > alpha && value < beta) {
+                                    // research
+                                    value = pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta, firstMove);
+                                }
+                            }
+                        }else{//manier vinden om razoring uit te zetten...
+
                         }
                     }
                     board.undoMove();
@@ -2051,9 +2060,8 @@ namespace chess::SearchAgents{
             }
         }
         template<class EvalAgent, bool side>
-        int zwSearch(chess::ClassicBitBoard& board, int depth, int alpha, int beta, bool isRazoring) {
+        int zwSearch(chess::ClassicBitBoard& board, int depth, int alpha, int beta) {
             nodes++;
-
             //Note: probing table is more expansive compared to gain.
             //Perhapse if "eval" becomes more expensive later on probing might become better!
             //if (depth == 0) {
@@ -2069,27 +2077,21 @@ namespace chess::SearchAgents{
 
             //probe transposition table
             uint64_t key = ClassicBitBoard::HashUtil::createHash(board);
-            //bool tablehit = TTtable.get(key, entry, depth);
             bool tablehit = TTtable.contains(key);
-            int razoringMargin = 5;
             Move firstMove;
             Move best;
             if (tablehit) {
                 tableHits++;
-                //if (entry.depth >= depth) { //Already computed
+                firstMove = TTtable.move(key, this->searchID);
                 if (TTtable.depth(key, this->searchID) >= depth) { //Already computed
                     //if (entry.type == TTtype::PV) { //Knuth's Type 1
                     chess::TTtype type = TTtable.type(key, this->searchID);
                     int eval = TTtable.eval(key, this->searchID);
-                    best = TTtable.move(key, this->searchID);
+                    best = firstMove;
                     if (type == TTtype::PV) { //Knuth's Type 1
-                        //best = entry.move;
-                        //return entry.eval;
                         return eval;
                     }
                     else if (type == TTtype::CUT) { //Knuth's Type 2 = lower bound
-                        //alpha = entry.eval;
-                        //best = entry.move;
                         if (side){
                             if (eval >= beta) { return eval; }
                         }else{
@@ -2097,8 +2099,6 @@ namespace chess::SearchAgents{
                         }
                     }
                     else if (type == TTtype::ALL) { //Knuth's Type 3 = upper bound
-                        //beta = entry.eval;
-                        //best = entry.move;
                         if (side){
                             if (eval <= alpha) { return eval; }
                         }else{
@@ -2109,7 +2109,6 @@ namespace chess::SearchAgents{
                         std::cout << "Something went wrong????" << std::endl;
                     }
                 }
-                firstMove = TTtable.move(key, this->searchID);
             }
             board.generate_moves(moves[depth]);
             if (moves[depth].empty()) //No more moves=terminal node
@@ -2141,184 +2140,83 @@ namespace chess::SearchAgents{
 
             int in_alpha = alpha;
             int in_beta = beta;
-            if(defaultRazoring) {//false
-                if (side) {
-                    int bestValue = INT_MIN;
-                    int value = INT_MIN;
-                    for (Move &m : moves[depth]) {
-                        board.makeMove(m);
-                        if (depth <= 1) {
-                            value = std::max(value, EvalAgent::template eval<!side>(board));
-                            nodes++;
-                        } else if (depth == 3) {
-                            value = std::max(value, EvalAgent::template eval<!side>(board));//calculate static value
-                            if (value + razoringMargin < alpha) { //for white < alpha means not better than alpha.
-                                nodes++ //to the next branch
-                                value = std::max(value, zwSearch<EvalAgent, !side>(board, , alpha, beta,
-                                                                                   true))//start at horizon of next brench
-                            }
-                        } else {
-                            value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta,
-                                                                               defaultRazoring));
-                        }
-                        board.undoMove();
-                        //std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-                        if (value > bestValue) {
-                            best.flags = m.flags;
-                            best.from = m.from;
-                            best.to = m.to;
-                            best.IsWhite = m.IsWhite;
-                            bestValue = value;
-                        }
-                        if (value >= beta) {
-                            break;
-                        }
-                        alpha = std::max(alpha, value);
-                    }
-                    if (value > in_alpha && value < in_beta) {
-                        TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
-                    } else if (value >= in_beta) {
-                        TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
-                    } else if (value <= in_alpha) {
-                        TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
-                    }
-                    return bestValue;
-                } else {
-                    int bestValue = INT_MAX;
-                    int value = INT_MAX;
-                    for (Move &m : moves[depth]) {
-                        board.makeMove(m);
+
+            if (side) {
+                int bestValue = INT_MIN;
+                int value = INT_MIN;
+                for (Move& m : moves[depth]) {
+                    board.makeMove(m);
+                    if (depth <= 1) {
+                        value = std::max(value, EvalAgent::template eval<!side>(board));
                         nodes++;
-                        if (depth <= 1) {
-                            value = std::min(value, EvalAgent::template eval<!side>(board));
-                        } else if (depth == 3) {
-                            value = std::max(value, EvalAgent::template eval<!side>(board));//calculate static value
-                            if (value + razoringMargin > alpha) { //for black > alpha means not better than alpha.
-                                nodes++ //to the next branch
-                                value = std::max(value, zwSearch<EvalAgent, !side>(board, , alpha, beta,
-                                                                                   true))//start at horizon of next brench
-                            }
-                        } else {
-                            value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
-                        }
-                        board.undoMove();
-                        //std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-                        if (value < bestValue) {
-                            best.flags = m.flags;
-                            best.from = m.from;
-                            best.to = m.to;
-                            best.IsWhite = m.IsWhite;
-                            bestValue = value;
-                        }
-                        if (value <= alpha) {
-                            break;
-                        }
-                        beta = std::min(beta, value);
                     }
-                    if (value > in_alpha && value < in_beta) {
-                        TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
-                    } else if (value >= in_beta) {
-                        //note: 'black to move' = minimizing => upper bound = all node
-                        TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
-                    } else if (value <= in_alpha) {
-                        //note: 'black to move' = minimizing => lower bound = cut node
-                        TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
+                    else {
+                        value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
                     }
-                    return bestValue;
+                    board.undoMove();
+                    //std::cout << board.MovetoSAN(m) << " " << value << std::endl;
+                    if (value > bestValue) {
+                        best.flags = m.flags;
+                        best.from = m.from;
+                        best.to = m.to;
+                        best.IsWhite = m.IsWhite;
+                        bestValue = value;
+                    }
+                    if (value >= beta) {
+                        break;
+                    }
+                    alpha = std::max(alpha, value);
                 }
+                if (value > in_alpha && value < in_beta) {
+                    TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
+                }
+                else if (value >= in_beta) {
+                    TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
+                }
+                else if (value <= in_alpha) {
+                    TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
+                }
+                return bestValue;
             }
-            else if(!defaultRazoring){//true
-                if (side) {
-                    int bestValue = INT_MIN;
-                    int value = INT_MIN;
-                    for (Move& m : moves[depth]) {
-                        board.makeMove(m);
-                        if (depth <= 4) {
-                            value = std::max(value, EvalAgent::template eval<!side>(board));
-                            nodes++;
-                        }
-                        else if(depth == 3){
-                            value = std::max(value, EvalAgent::template eval<!side>(board));//calculate static value
-                            if(value + razoringMargin < alpha){ //for white < alpha means not better than alpha.
-                                nodes++ //to the next branch
-                                value = std::max(value, zwSearch<EvalAgent, !side>(board, depth-1, alpha, beta, true))//start at horizon of next brench
-                            }
-                        }
-                        else {
-                            value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta, defaultRazoring));
-                        }
-                        board.undoMove();
-                        //std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-                        if (value > bestValue) {
-                            best.flags = m.flags;
-                            best.from = m.from;
-                            best.to = m.to;
-                            best.IsWhite = m.IsWhite;
-                            bestValue = value;
-                        }
-                        if (value >= beta) {
-                            break;
-                        }
-                        alpha = std::max(alpha, value);
+            else {
+                int bestValue = INT_MAX;
+                int value = INT_MAX;
+                for (Move& m : moves[depth]) {
+                    board.makeMove(m); nodes++;
+                    if (depth <= 1) {
+                        value = std::min(value, EvalAgent::template eval<!side>(board));
                     }
-                    if (value > in_alpha && value < in_beta) {
-                        TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
+                    else {
+                        value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
                     }
-                    else if (value >= in_beta) {
-                        TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
+                    board.undoMove();
+                    //std::cout << board.MovetoSAN(m) << " " << value << std::endl;
+                    if (value < bestValue) {
+                        best.flags = m.flags;
+                        best.from = m.from;
+                        best.to = m.to;
+                        best.IsWhite = m.IsWhite;
+                        bestValue = value;
                     }
-                    else if (value <= in_alpha) {
-                        TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
+                    if (value <= alpha) {
+                        break;
                     }
-                    return bestValue;
+                    beta = std::min(beta, value);
                 }
-                else {
-                    int bestValue = INT_MAX;
-                    int value = INT_MAX;
-                    for (Move& m : moves[depth]) {
-                        board.makeMove(m); nodes++;
-                        if (depth <= 1) {
-                            value = std::min(value, EvalAgent::template eval<!side>(board));
-                        }
-                        else if(depth == 3){
-                            value = std::max(value, EvalAgent::template eval<!side>(board));//calculate static value
-                            if(value + razoringMargin > alpha){ //for black > alpha means not better than alpha.
-                                nodes++ //to the next branch
-                                value = std::max(value, zwSearch<EvalAgent, !side>(board, 0, alpha, beta, true))//start at horizon of next brench
-                            }
-                        }
-                        else {
-                            value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
-                        }
-                        board.undoMove();
-                        //std::cout << board.MovetoSAN(m) << " " << value << std::endl;
-                        if (value < bestValue) {
-                            best.flags = m.flags;
-                            best.from = m.from;
-                            best.to = m.to;
-                            best.IsWhite = m.IsWhite;
-                            bestValue = value;
-                        }
-                        if (value <= alpha) {
-                            break;
-                        }
-                        beta = std::min(beta, value);
-                    }
-                    if (value > in_alpha && value < in_beta) {
-                        TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
-                    }
-                    else if (value >= in_beta) {
-                        //note: 'black to move' = minimizing => upper bound = all node
-                        TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
-                    }
-                    else if (value <= in_alpha) {
-                        //note: 'black to move' = minimizing => lower bound = cut node
-                        TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
-                    }
-                    return bestValue;
+                if (value > in_alpha && value < in_beta) {
+                    TTtable.update(key, this->searchID, TTtype::PV, value, depth, best);
                 }
+                else if (value >= in_beta) {
+                    //note: 'black to move' = minimizing => upper bound = all node
+                    TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
+                }
+                else if (value <= in_alpha) {
+                    //note: 'black to move' = minimizing => lower bound = cut node
+                    TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
+                }
+                return bestValue;
             }
         }
-        */
+    };
 }
 
