@@ -1661,6 +1661,7 @@ namespace chess::SearchAgents{
 
     class PVSRazoring{
         Polyglot book;
+        std::vector<int> razorMargin = {0,250,350,500};
     public:
         // counters
         uint8_t searchID = 0; //increment every time a new search is started, overflow at the end => not a problem.
@@ -1860,7 +1861,7 @@ namespace chess::SearchAgents{
         template<class EvalAgent, bool side>
         int pvsRazoring(ClassicBitBoard& board,int depth, int alpha, int beta, Move& bestMove){
             this->nodes++;
-            bool isRazoring = false;
+
 
             //if time limis is exceeded cuase the parent node to "CUT".
             //return "0" could cause undefined behavior (might be better compared to actual value)
@@ -1954,7 +1955,7 @@ namespace chess::SearchAgents{
                         //First move in node => PV node
                         value = pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta, firstMove);
                     }else {
-                        value = zwSearch<EvalAgent,!side>(board, depth - 1, alpha,alpha + 1, isRazoring);
+                        value = zwSearch<EvalAgent,!side>(board, depth - 1, alpha,alpha + 1);
                         if (value > alpha && value < beta) {
                             // research
                             value = pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta, firstMove);
@@ -2002,7 +2003,7 @@ namespace chess::SearchAgents{
                         //First move in node => PV node
                         value =pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta,firstMove);
                     } else {
-                        value = zwSearch<EvalAgent,!side>(board, depth - 1, beta-1,beta, isRazoring);
+                        value = zwSearch<EvalAgent,!side>(board, depth - 1, beta-1,beta);
                         if (value > alpha && value < beta) {
                             // research
                             value = pvsRazoring<EvalAgent,!side>(board, depth - 1, alpha, beta, firstMove);
@@ -2037,15 +2038,15 @@ namespace chess::SearchAgents{
             }
         }
         template<class EvalAgent, bool side>
-        int zwSearch(chess::ClassicBitBoard& board, int depth, int alpha, int beta, bool isRazoring) {
+        int zwSearch(chess::ClassicBitBoard& board, int depth, int alpha, int beta) {
             nodes++;
-            int razorMargin = 100;
+            bool isRazoring = false;
             //Note: probing table is more expansive compared to gain.
             //Perhapse if "eval" becomes more expensive later on probing might become better!
-            //if (depth == 0) {
+            if (depth == 0) {
             //	//if (tablehit) return entry.eval; else
-            //	return EvalAgent::template eval<side>(board);
-            //}
+            	return EvalAgent::template eval<side>(board);
+            }
             //auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - this->startTime).count();
             //if (elapsed > this->limitTime && this->limitTime > 0) return 0;
 
@@ -2119,7 +2120,7 @@ namespace chess::SearchAgents{
             int in_alpha = alpha;
             int in_beta = beta;
 
-            if (side) {
+            if (side) {//white, maximising
                 int bestValue = INT_MIN;
                 int value = INT_MIN;
                 for (Move& m : moves[depth]) {
@@ -2131,24 +2132,24 @@ namespace chess::SearchAgents{
                     else {
                         if(!isRazoring){
                             if(depth > 3){
-                                value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta, isRazoring));
+                                value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
                             }
                             else{
-                                if(tablehit&&m!=firstMove&&!m.to&&board.Enemy<side>()){
+                                if(m!=firstMove&&!(m.to&board.Enemy<side>())){
                                     //wat is de value op deze diepte?
                                     value = std::max(value, EvalAgent::template eval<!side>(board));
-                                    if(value + razorMargin < alpha){
+                                    if(value + razorMargin[depth] < alpha){
                                         isRazoring = true;
-                                        value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta, isRazoring));
+                                        value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta));
                                     }
                                 }
                                 else{
-                                    value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta, isRazoring));
+                                    value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
                                 }
                             }
                         }
                         else{
-                            value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta, isRazoring));
+                            value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta));
                         }
                     }
                     board.undoMove();
@@ -2176,7 +2177,7 @@ namespace chess::SearchAgents{
                 }
                 return bestValue;
             }
-            else {
+            else { //black, minimizing
                 int bestValue = INT_MAX;
                 int value = INT_MAX;
                 for (Move& m : moves[depth]) {
@@ -2187,27 +2188,27 @@ namespace chess::SearchAgents{
                     else {
                         if(!isRazoring){
                             if(depth > 3){
-                                value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta, isRazoring));
+                                value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
                             }
                             else{
-                                if(tablehit&&m!=firstMove&&!m.to&&board.Enemy<side>()){
+                                if(m!=firstMove&&!(m.to&board.Enemy<side>())){
                                     //wat is de value op deze diepte?
-                                    value = std::max(value, EvalAgent::template eval<!side>(board));
-                                    if(value - razorMargin > beta){
+                                    value = std::min(value, EvalAgent::template eval<!side>(board));
+                                    if(value - razorMargin[depth] > beta){
                                         isRazoring = true;
-                                        value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta, isRazoring));
+                                        value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta));
                                     }
                                     else{
-                                        value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta, isRazoring));
+                                        value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
                                     }
                                 }
                                 else{
-                                    value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta, isRazoring));
+                                    value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 1, alpha, beta));
                                 }
                             }
                         }
                         else{
-                            value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta, isRazoring));
+                            value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta));
                         }
                     }
                     board.undoMove();
