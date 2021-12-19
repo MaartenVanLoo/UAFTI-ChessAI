@@ -28,7 +28,8 @@ namespace UCI {
 		chess::ClassicBitBoard board;
 		//chess::SearchAgents::AlphaBeta searchAgent;
 		//chess::SearchAgents::IttAlphaBeta searchAgent;
-		chess::SearchAgents::PVS searchAgent;
+		//chess::SearchAgents::PVS searchAgent;
+		chess::SearchAgents::PVSRazoring searchAgent;
 		chess::BetterAgent evalAgent;
 		UCIOptions options;
 		chess::Move bestmove;

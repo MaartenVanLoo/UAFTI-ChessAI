@@ -2043,7 +2043,7 @@ namespace chess::SearchAgents{
             bool isRazoring = false;
             //Note: probing table is more expansive compared to gain.
             //Perhapse if "eval" becomes more expensive later on probing might become better!
-            if (depth == 0) {
+            if (depth <= 0) {
             //	//if (tablehit) return entry.eval; else
             	return EvalAgent::template eval<side>(board);
             }
@@ -2137,7 +2137,7 @@ namespace chess::SearchAgents{
                             else{
                                 if(m!=firstMove&&!(m.to&board.Enemy<side>())){
                                     //wat is de value op deze diepte?
-                                    value = std::max(value, EvalAgent::template eval<!side>(board));
+                                    //value = std::max(value, EvalAgent::template eval<!side>(board));
                                     if(value + razorMargin[depth] < alpha){
                                         isRazoring = true;
                                         value = std::max(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta));
@@ -2193,7 +2193,7 @@ namespace chess::SearchAgents{
                             else{
                                 if(m!=firstMove&&!(m.to&board.Enemy<side>())){
                                     //wat is de value op deze diepte?
-                                    value = std::min(value, EvalAgent::template eval<!side>(board));
+                                    //value = std::max(value, EvalAgent::template eval<!side>(board));
                                     if(value - razorMargin[depth] > beta){
                                         isRazoring = true;
                                         value = std::min(value, zwSearch<EvalAgent, !side>(board, depth - 2, alpha, beta));
