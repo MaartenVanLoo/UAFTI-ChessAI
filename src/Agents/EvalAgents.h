@@ -162,6 +162,16 @@ namespace chess {
 			int piece_val_eg = 0;
 			int npm = 0;
 
+			bool W_K = false;
+			bool B_K = false;
+			bool W_KN = false;
+			bool B_KN = false;
+			bool W_KB = false;
+			bool B_KB = false;
+			uint8_t wBishop = 0;
+            uint8_t bBishop = 0;
+            uint8_t wKnight = 0;
+            uint8_t bKnight = 0;
 
 			uint64_t pawn = brd.WPawn;
 			uint64_t rook = brd.WRook;
@@ -184,6 +194,7 @@ namespace chess {
 				npm += pieceBonus::rook<true>();
 			}
 			Bitloop(bishop) {
+                wBishop++;
 				psqt_mg += psqt::bishop<true>(SquareOf(bishop));
 				psqt_eg += psqt::bishop<false>(SquareOf(bishop));
 				piece_val_mg += pieceBonus::bishop<true>();
@@ -191,6 +202,7 @@ namespace chess {
 				npm += pieceBonus::bishop<true>();
 			}
 			Bitloop(knight) {
+                wKnight++;
 				psqt_mg += psqt::knight<true>(SquareOf(knight));
 				psqt_eg += psqt::knight<false>(SquareOf(knight));
 				piece_val_mg += pieceBonus::knight<true>();
@@ -207,6 +219,16 @@ namespace chess {
 			Bitloop(king) {
 				psqt_mg += psqt::king<true>(SquareOf(king));
 				psqt_eg += psqt::king<false>(SquareOf(king));
+			}
+            //Insufficient material?
+			if (!brd.WPawn && !brd.WRook && !brd.WBishop && !brd.WKnight && !brd.WQueen){
+                W_K = true; //lone king
+			}
+			if (!brd.WPawn && !brd.WRook && !brd.WBishop && wKnight == 1 && !brd.WQueen){
+                W_KN = true; // only king and knight
+			}
+			if (!brd.WPawn && !brd.WRook && wBishop == 1 && !brd.WKnight && !brd.WQueen){
+                W_KB = true; // only king and bishop
 			}
 			//Score black:
 			pawn = brd.BPawn;
@@ -229,6 +251,7 @@ namespace chess {
 				npm -= pieceBonus::rook<true>();
 			}
 			Bitloop(bishop) {
+                bBishop++;
 				psqt_mg -= psqt::bishop<true>(63 - SquareOf(bishop));
 				psqt_eg -= psqt::bishop<false>(63 - SquareOf(bishop));
 				piece_val_mg -= pieceBonus::bishop<true>();
@@ -236,6 +259,7 @@ namespace chess {
 				npm -= pieceBonus::bishop<true>();
 			}
 			Bitloop(knight) {
+                bKnight++;
 				psqt_mg -= psqt::knight<true>(63 - SquareOf(knight));
 				psqt_eg -= psqt::knight<false>(63 - SquareOf(knight));
 				piece_val_mg -= pieceBonus::knight<true>();
@@ -253,6 +277,23 @@ namespace chess {
 				psqt_mg -= psqt::king<true>(63 - SquareOf(king));
 				psqt_eg -= psqt::king<false>(63 - SquareOf(king));
 			}
+            //Insufficient material?
+            if (!brd.BPawn && !brd.BRook && !brd.BBishop && !brd.BKnight && !brd.BQueen){
+                B_K = true; //lone king
+            }
+            if (!brd.BPawn && !brd.BRook && !brd.BBishop && bKnight == 1 && !brd.BQueen){
+                B_KN = true; // only king and knight
+            }
+            if (!brd.BPawn && !brd.BRook && bBishop == 1 && !brd.BKnight && !brd.BQueen){
+                B_KB = true; // only king and bishop
+            }
+
+			//Insufficient material?
+            if ( (W_K || W_KB || W_KN) &&
+                 (B_K || B_KB || B_KN)){
+                return 0; //DRAW due to insufficient material
+            }
+
 			//MG eval
 			int mg = 0;
 			mg += piece_val_mg;

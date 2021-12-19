@@ -69,7 +69,7 @@ bool UCI::Limits::exceeded(int depth)
 	if (this->maxSearchTime != -1) {
 		if (elapsed >= maxSearchTime) return true;
 		//if last iteration took longer than 1/4th of the remaining time => finish search, next itt will probably not be able to finish;
-		if (lastItt > (maxSearchTime - elapsed) / 4) return true;
+		if (lastItt > (maxSearchTime - elapsed) / 4 && (btime != -1 || wtime != -1)) return true;
 	}
 	return false;
 }
