@@ -160,7 +160,10 @@ namespace chess {
 			int psqt_eg = 0;
 			int piece_val_mg = 0;
 			int piece_val_eg = 0;
+			int imbalance_total_mg = 0;
+			int imbalance_total_eg = 0;
 			int npm = 0;
+            int pieceCount[2][7]= {0};
 
 			bool W_K = false;
 			bool B_K = false;
@@ -181,44 +184,55 @@ namespace chess {
 			uint64_t king = brd.WKing;
 
 			Bitloop(pawn) {
-				psqt_mg += psqt::pawn<true>(SquareOf(pawn));
-				psqt_eg += psqt::pawn<false>(SquareOf(pawn));
-				piece_val_mg += pieceBonus::pawn<true>();
-				piece_val_eg += pieceBonus::pawn<false>();
+                pieceCount[0][1]++;
+				psqt_mg += Psqt::pawn<true>(SquareOf(pawn));
+				psqt_eg += Psqt::pawn<false>(SquareOf(pawn));
+				piece_val_mg += PieceBonus::pawn<true>();
+				piece_val_eg += PieceBonus::pawn<false>();
 			}
 			Bitloop(rook) {
-				psqt_mg += psqt::rook<true>(SquareOf(rook));
-				psqt_eg += psqt::rook<false>(SquareOf(rook));
-				piece_val_mg += pieceBonus::rook<true>();
-				piece_val_eg += pieceBonus::rook<false>();
-				npm += pieceBonus::rook<true>();
+                pieceCount[0][4]++;
+				psqt_mg += Psqt::rook<true>(SquareOf(rook));
+				psqt_eg += Psqt::rook<false>(SquareOf(rook));
+				piece_val_mg += PieceBonus::rook<true>();
+				piece_val_eg += PieceBonus::rook<false>();
+				npm += PieceBonus::rook<true>();
 			}
 			Bitloop(bishop) {
                 wBishop++;
-				psqt_mg += psqt::bishop<true>(SquareOf(bishop));
-				psqt_eg += psqt::bishop<false>(SquareOf(bishop));
-				piece_val_mg += pieceBonus::bishop<true>();
-				piece_val_eg += pieceBonus::bishop<false>();
-				npm += pieceBonus::bishop<true>();
+                pieceCount[0][3]++;
+				psqt_mg += Psqt::bishop<true>(SquareOf(bishop));
+				psqt_eg += Psqt::bishop<false>(SquareOf(bishop));
+				piece_val_mg += PieceBonus::bishop<true>();
+				piece_val_eg += PieceBonus::bishop<false>();
+				npm += PieceBonus::bishop<true>();
 			}
+            if (pieceCount[0][3] >= 2){ //Bishop pair
+                pieceCount[0][0]++;
+                //imbalance_total_mg += Imbalance::bishopPair<true>();
+                //imbalance_total_eg += Imbalance::bishopPair<false>();
+            }
 			Bitloop(knight) {
                 wKnight++;
-				psqt_mg += psqt::knight<true>(SquareOf(knight));
-				psqt_eg += psqt::knight<false>(SquareOf(knight));
-				piece_val_mg += pieceBonus::knight<true>();
-				piece_val_eg += pieceBonus::knight<false>();
-				npm += pieceBonus::knight<true>();
+                pieceCount[0][2]++;
+				psqt_mg += Psqt::knight<true>(SquareOf(knight));
+				psqt_eg += Psqt::knight<false>(SquareOf(knight));
+				piece_val_mg += PieceBonus::knight<true>();
+				piece_val_eg += PieceBonus::knight<false>();
+				npm += PieceBonus::knight<true>();
 			}
 			Bitloop(queen) {
-				psqt_mg += psqt::queen<true>(SquareOf(queen));
-				psqt_eg += psqt::queen<false>(SquareOf(queen));
-				piece_val_mg += pieceBonus::queen<true>();
-				piece_val_eg += pieceBonus::queen<false>();
-				npm += pieceBonus::queen<true>();
+                pieceCount[0][5]++;
+				psqt_mg += Psqt::queen<true>(SquareOf(queen));
+				psqt_eg += Psqt::queen<false>(SquareOf(queen));
+				piece_val_mg += PieceBonus::queen<true>();
+				piece_val_eg += PieceBonus::queen<false>();
+				npm += PieceBonus::queen<true>();
 			}
 			Bitloop(king) {
-				psqt_mg += psqt::king<true>(SquareOf(king));
-				psqt_eg += psqt::king<false>(SquareOf(king));
+                pieceCount[0][6]++;
+				psqt_mg += Psqt::king<true>(SquareOf(king));
+				psqt_eg += Psqt::king<false>(SquareOf(king));
 			}
             //Insufficient material?
 			if (!brd.WPawn && !brd.WRook && !brd.WBishop && !brd.WKnight && !brd.WQueen){
@@ -238,45 +252,57 @@ namespace chess {
 			queen = brd.BQueen;
 			king = brd.BKing;
 			Bitloop(pawn) {
-				psqt_mg -= psqt::pawn<true>(63-SquareOf(pawn));
-				psqt_eg -= psqt::pawn<false>(63-SquareOf(pawn));
-				piece_val_mg -= pieceBonus::pawn<true>();
-				piece_val_eg -= pieceBonus::pawn<false>();
+                pieceCount[1][1]++;
+				psqt_mg -= Psqt::pawn<true>(63 - SquareOf(pawn));
+				psqt_eg -= Psqt::pawn<false>(63 - SquareOf(pawn));
+				piece_val_mg -= PieceBonus::pawn<true>();
+				piece_val_eg -= PieceBonus::pawn<false>();
 			}
 			Bitloop(rook) {
-				psqt_mg -= psqt::rook<true>(63-SquareOf(rook));
-				psqt_eg -= psqt::rook<false>(63-SquareOf(rook));
-				piece_val_mg -= pieceBonus::rook<true>();
-				piece_val_eg -= pieceBonus::rook<false>();
-				npm -= pieceBonus::rook<true>();
+                pieceCount[1][4]++;
+				psqt_mg -= Psqt::rook<true>(63 - SquareOf(rook));
+				psqt_eg -= Psqt::rook<false>(63 - SquareOf(rook));
+				piece_val_mg -= PieceBonus::rook<true>();
+				piece_val_eg -= PieceBonus::rook<false>();
+				npm -= PieceBonus::rook<true>();
 			}
 			Bitloop(bishop) {
                 bBishop++;
-				psqt_mg -= psqt::bishop<true>(63 - SquareOf(bishop));
-				psqt_eg -= psqt::bishop<false>(63 - SquareOf(bishop));
-				piece_val_mg -= pieceBonus::bishop<true>();
-				piece_val_eg -= pieceBonus::bishop<false>();
-				npm -= pieceBonus::bishop<true>();
+                pieceCount[1][3]++;
+				psqt_mg -= Psqt::bishop<true>(63 - SquareOf(bishop));
+				psqt_eg -= Psqt::bishop<false>(63 - SquareOf(bishop));
+				piece_val_mg -= PieceBonus::bishop<true>();
+				piece_val_eg -= PieceBonus::bishop<false>();
+				npm -= PieceBonus::bishop<true>();
 			}
+            if (pieceCount[1][3] >= 2){ //Bishop pair
+                pieceCount[1][0]++;
+                //imbalance_total_mg -= Imbalance::bishopPair<true>();
+                //imbalance_total_eg -= Imbalance::bishopPair<false>();
+            }
 			Bitloop(knight) {
                 bKnight++;
-				psqt_mg -= psqt::knight<true>(63 - SquareOf(knight));
-				psqt_eg -= psqt::knight<false>(63 - SquareOf(knight));
-				piece_val_mg -= pieceBonus::knight<true>();
-				piece_val_eg -= pieceBonus::knight<false>();
-				npm -= pieceBonus::knight<true>();
+                pieceCount[1][2]++;
+				psqt_mg -= Psqt::knight<true>(63 - SquareOf(knight));
+				psqt_eg -= Psqt::knight<false>(63 - SquareOf(knight));
+				piece_val_mg -= PieceBonus::knight<true>();
+				piece_val_eg -= PieceBonus::knight<false>();
+				npm -= PieceBonus::knight<true>();
 			}
-			Bitloop(queen) {
-				psqt_mg -= psqt::queen<true>(63 - SquareOf(queen));
-				psqt_eg -= psqt::queen<false>(63 - SquareOf(queen));
-				piece_val_mg -= pieceBonus::queen<true>();
-				piece_val_eg -= pieceBonus::queen<false>();
-				npm -= pieceBonus::queen<true>();
+			Bitloop(queen){
+                pieceCount[1][5]++;
+				psqt_mg -= Psqt::queen<true>(63 - SquareOf(queen));
+				psqt_eg -= Psqt::queen<false>(63 - SquareOf(queen));
+				piece_val_mg -= PieceBonus::queen<true>();
+				piece_val_eg -= PieceBonus::queen<false>();
+				npm -= PieceBonus::queen<true>();
 			}
 			Bitloop(king) {
-				psqt_mg -= psqt::king<true>(63 - SquareOf(king));
-				psqt_eg -= psqt::king<false>(63 - SquareOf(king));
+                pieceCount[1][6]++;
+				psqt_mg -= Psqt::king<true>(63 - SquareOf(king));
+				psqt_eg -= Psqt::king<false>(63 - SquareOf(king));
 			}
+
             //Insufficient material?
             if (!brd.BPawn && !brd.BRook && !brd.BBishop && !brd.BKnight && !brd.BQueen){
                 B_K = true; //lone king
@@ -294,17 +320,35 @@ namespace chess {
                 return 0; //DRAW due to insufficient material
             }
 
+            //Imbalance //TODO: check if the implementation is correct
+            // Source: https://hxim.github.io/Stockfish-Evaluation-Guide/ && https://github.com/official-stockfish/Stockfish/blob/master/src/material.cpp
+            imbalance_total_mg = Imbalance::imbalance<side,true>(pieceCount) - Imbalance::imbalance<!side,true>(pieceCount);
+            imbalance_total_eg = Imbalance::imbalance<side,false>(pieceCount) - Imbalance::imbalance<!side,false>(pieceCount);
+            /*for (int i = 0; i < 2; i++){
+                for (int j = 0; j < 6; j++) {
+                    std::cout << pieceCount[i][j] << " ";
+                }
+                std::cout << "\n";
+            }*/
+
 			//MG eval
 			int mg = 0;
 			mg += piece_val_mg;
 			mg += psqt_mg;
+            mg += imbalance_total_mg/16;
 
 			//EG eval
 			int eg = 0;
 			eg += piece_val_eg;
 			eg += psqt_eg;
+			eg += imbalance_total_eg/16;
 
-			//tempo:
+			//std::cout << "imbalance mg: " <<imbalance_total_mg;
+            //std::cout << " imbalance eg: " <<imbalance_total_eg << std::endl;
+            //std::cout << "mg: " <<mg;
+            //std::cout << " eg: " <<eg<< std::endl;
+
+            //tempo:
 			int tempo = side ? 28 : -28;
 
 			//phase
@@ -323,7 +367,7 @@ namespace chess {
 		}
 	private:
 
-		struct pieceBonus {
+		struct PieceBonus {
 			template<bool mg>
 			_Compiletime int queen() { return mg ? 2538 : 2682; }
 			template<bool mg>
@@ -335,7 +379,7 @@ namespace chess {
 			template<bool mg>
 			_Compiletime int pawn() { return mg ? 124 : 206; }
 		};
-		struct psqt {
+		struct Psqt {
 			// https://github.com/official-stockfish/Stockfish/blob/master/src/psqt.cpp
 
 			static inline int knight_score[2][64]{
@@ -512,6 +556,82 @@ namespace chess {
 
 
 		};
+
+        struct Imbalance{
+            template <bool mg>
+            _Compiletime int bishopPair(){return mg ? 1419 : 1455;}
+
+            static inline int quadraticOursMG[][8]{
+                //mg
+                {1419},
+                {101,37},
+                {57,249,-49},
+                {0,118,10,0},
+                {-63,-5,100,132,-246},
+                {-210,37,147,161,-158,-9}
+            };
+            static inline int quadraticOursEG[][8]{
+                    //mg
+                    {1455},
+                    {28,39},
+                    {64,187,-62},
+                    {0,137,27,0},
+                    {-68,3,81,118,-244},
+                    {-211,14,141,105,-174,-31}
+            };
+            static inline int quadraticTheirsMG[][8]{
+                    //mg
+                    {},
+                    {33},
+                    {46,106},
+                    {75,59,60},
+                    {26,6,38,-12},
+                    {97,100,-58,112,276}
+            };
+            static inline int quadraticTheirsEG[][8]{
+                    //eg
+                    {},
+                    {30},
+                    {18,84},
+                    {35,44,15},
+                    {35,22,39,-2},
+                    {93,163,-91,192,225}
+            };
+            template<bool mg>
+            _Compiletime int quadraticOurs(int p1, int p2) {
+                if (mg) {
+                    return (quadraticOursMG[p1][p2]);
+                }
+                else {
+                    return (quadraticOursEG[p1][p2]);
+                }
+            }
+            template<bool mg>
+            _Compiletime int quadraticTheirs(int p1, int p2) {
+                if (mg) {
+                    return (quadraticTheirsMG[p1][p2]);
+                }
+                else {
+                    return (quadraticTheirsEG[p1][p2]);
+                }
+            }
+            template <bool side, bool mg>
+            _Compiletime int imbalance( int pieceCount[2][7]){
+                constexpr int us = side?0:1;
+                constexpr int them = side?1:0;
+                int bonus = 0;
+                for (int p1 = 0; p1 < 6; p1 ++){ //0 = bishopPair;
+                    if (!pieceCount[us][p1]) continue;
+                    int v = quadraticOurs<mg>(p1,p1) * pieceCount[us][p1];
+                    for (int p2 = 0; p2 < p1; p2++){
+                        v += quadraticOurs<mg>(p1,p2) * pieceCount[us][p2]+
+                                quadraticTheirs<mg>(p1,p2) * pieceCount[them][p2];
+                    }
+                    bonus += pieceCount[us][p1] * v;
+                }
+                return bonus;
+            }
+        };
 
 	
 	};

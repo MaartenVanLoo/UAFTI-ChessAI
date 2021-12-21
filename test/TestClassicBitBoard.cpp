@@ -204,14 +204,14 @@ namespace ClassicBitBoard_Test {
 				std::replace(fen.begin(), fen.end(), 'w', 'b');
 			}
 			chess::ClassicBitBoard board(fen);
-			EXPECT_EQ(move, board.movefromUCI(lan)) << i << ":" << fen;
-			chess::Move result = board.movefromUCI(lan);
+			EXPECT_EQ(move, board.moveFromUCI(lan)) << i << ":" << fen;
+			chess::Move result = board.moveFromUCI(lan);
 			EXPECT_EQ(move.flags, result.flags);
 			EXPECT_EQ(move.to, result.to);
 			EXPECT_EQ(move.from, result.from);
 
 			result = chess::Move();
-			EXPECT_TRUE(board.movefromUCI(lan, result));
+			EXPECT_TRUE(board.moveFromUCI(lan, result));
 			EXPECT_EQ(move, result) << i << ":" << fen;
 			EXPECT_EQ(move.IsWhite, result.IsWhite);
 			EXPECT_EQ(move.flags, result.flags);

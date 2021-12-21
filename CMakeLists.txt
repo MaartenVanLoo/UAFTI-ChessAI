@@ -45,8 +45,8 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
 	target_link_options(UAFTI-ChessAI PRIVATE "$<$<CONFIG:Release>:/DEBUG>")
 	target_link_options(UAFTI-ChessAI PRIVATE "$<$<CONFIG:Release>:/OPT:REF>")
 	target_link_options(UAFTI-ChessAI PRIVATE "$<$<CONFIG:Release>:/OPT:ICF>")
-	target_link_options(UAFTI-ChessAI PRIVATE "$<$<CONFIG:Release>:/ZC:inline>")
-	target_link_options(UAFTI-ChessAI PRIVATE "$<$<CONFIG:Release>:/sdl>")
+	target_link_options(UAFTI-ChessAI PRIVATE "$<$<CONFIG:Release>:/LTCG>")
+
 
 	#enable profiling option for visual studio
 	SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/PROFILE")

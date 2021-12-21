@@ -102,7 +102,7 @@ namespace chess {
         this->EnPassantTarget = newBoard.EnPassantTarget;
         this->rookPin = newBoard.rookPin;
         this->bishopPin = newBoard.bishopPin;
-        this->halfmoves = newBoard.halfmoves;
+        this->halfmoves = newBoard.halfMoves;
         this->state.hasEP = newBoard.hasEP;
         this->state.BCastleL = newBoard.BCastleL;
         this->state.BCastleR = newBoard.BCastleR;
@@ -481,7 +481,7 @@ namespace chess {
     {
         uint8_t piece = getMoveOwnPiece(move.flags);
         map rookmask = 0;
-        halfmoves += 1; //castling always increases halfmoves
+        halfmoves += 1; //castling always increases halfMoves
         if constexpr (IsLeft) {
             rookmask = Castle_RookswitchL<IsWhite>();
         }
@@ -628,7 +628,7 @@ namespace chess {
             fen += " -";
         }
 
-        //halfmoves
+        //halfMoves
         fen += " " + std::to_string(this->halfmoves);
         
         //fullmoves
@@ -684,7 +684,7 @@ namespace chess {
             }
             //is EP
             else if (this->state.hasEP) {
-                if (this->EnPassantTarget << 8 == to) type = 2; //0b0010
+                if (this->EnPassantTarget << 8 == to && piece == BoardPiece::bp_Pawn) type = 2; //0b0010
             }
         }
         else {
@@ -698,7 +698,7 @@ namespace chess {
             }
             //is EP
             else if (this->state.hasEP) {
-                if (this->EnPassantTarget >> 8 == to) type = 2; //0b0010
+                if (this->EnPassantTarget >> 8 == to && piece == BoardPiece::bp_Pawn) type = 2; //0b0010
             }
         }
         move.IsWhite = this->side;
@@ -712,7 +712,7 @@ namespace chess {
         lan = Move::toLAN(move);
         return true;
     }
-    bool chess::ClassicBitBoard::movefromUCI(const std::string& lan, Move& move) {
+    bool chess::ClassicBitBoard::moveFromUCI(const std::string& lan, Move& move) {
         return LAN2Move(lan, move);
     }
     bool chess::ClassicBitBoard::SAN2Move(const std::string& san, Move& move) {
@@ -858,7 +858,7 @@ namespace chess {
             if (others) {
                 bool row = false, column = false;
                 Bitloop(others) { 
-                    // Multiple 'ohter' pieces with same target square (eg 3 rooks after promotion)
+                    // Multiple 'other' pieces with same target square (eg 3 rooks after promotion)
                     bit p = 1ull << SquareOf(others); // extract single piece from others;
                     if (getRank(p) == getRank(move.from)) {
                         column = true;
@@ -1054,7 +1054,7 @@ namespace chess {
             }
             //is EP
             else if (this->state.hasEP) {
-                if (this->EnPassantTarget << 8 == to) type = 2; //0b0010
+                if (this->EnPassantTarget << 8 == to && piece == BoardPiece::bp_Pawn) type = 2; //0b0010
             }
         }
         else {
@@ -1068,7 +1068,7 @@ namespace chess {
             }
             //is EP
             else if (this->state.hasEP) {
-                if (this->EnPassantTarget >> 8 == to) type = 2; //0b0010
+                if (this->EnPassantTarget >> 8 == to && piece == BoardPiece::bp_Pawn) type = 2; //0b0010
             }
         }
         return Move(this->side, from, to,encode_flags(type,piece,promotion));
@@ -1077,7 +1077,7 @@ namespace chess {
     {
         return move.toLAN();
     }
-    Move chess::ClassicBitBoard::movefromUCI(std::string& lan)
+    Move chess::ClassicBitBoard::moveFromUCI(std::string& lan)
     {
         return LAN2Move(lan);
     }
@@ -2109,7 +2109,7 @@ namespace chess {
                     //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) << 2), status.Castle_RookswitchL());
                     moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() << 2, encode_flags(0b0100, BoardPiece::bp_King, 0));
                 }
-                if (state.canCastleRigth<white>(kingban, Occ, Rooks<white>())) {
+                if (state.canCastleRight<white>(kingban, Occ, Rooks<white>())) {
                     //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) >> 2), status.Castle_RookswitchR());
                     moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() >> 2, encode_flags(0b1000, BoardPiece::bp_King, 0));
                 }
@@ -2132,7 +2132,7 @@ namespace chess {
         else if (pr & King<white>()) checkStatus = Pawn_AttackLeft<white>(King<white>());
         else checkStatus = 0xffffffffffffffffull;
 
-        //Calculate Check from enmey knights
+        //Calculate Check from enemy knights
         map knightcheck = lookup::Knight(SquareOf(King<white>()))& Knights<enemy>();
         if (knightcheck) checkStatus = knightcheck;
     }
@@ -2561,7 +2561,7 @@ namespace chess {
         return false;
     }
     template <bool IsWhite>
-    _InlineConstExpr bool chess::ClassicBitBoard::BoardState::canCastleRigth(map attacked, map occupied, map rook)
+    _InlineConstExpr bool chess::ClassicBitBoard::BoardState::canCastleRight(map attacked, map occupied, map rook)
     {
         if constexpr (IsWhite) {
             if (WCastleR) {
@@ -2603,7 +2603,7 @@ namespace chess {
         this->EnPassantTarget = brd.EnPassantTarget;
         this->rookPin = brd.rookPin;
         this->bishopPin = brd.bishopPin;
-        this->halfmoves = brd.halfmoves;
+        this->halfMoves = brd.halfmoves;
         this->hasEP = brd.state.hasEP;
         this->BCastleL = brd.state.BCastleL;
         this->BCastleR = brd.state.BCastleR;
@@ -2633,7 +2633,7 @@ namespace chess {
         this->EnPassantTarget = h.EnPassantTarget;
         this->rookPin = h.rookPin;
         this->bishopPin = h.bishopPin;
-        this->halfmoves = h.halfmoves;
+        this->halfMoves = h.halfMoves;
         this->hasEP = h.hasEP;
         this->BCastleL = h.BCastleL;
         this->BCastleR = h.BCastleR;

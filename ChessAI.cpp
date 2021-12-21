@@ -487,7 +487,7 @@ void testSearchAgents() {
 
 
 	std::cout << "Simulating game" << std::endl;
-	//simulated 50 move (8 halfmoves) game:
+	//simulated 50 move (8 halfMoves) game:
 	int n = 50 * 2;
 	for (int i = 6; i < std::size(activeAgents); i++) {
 		auto active = activeAgents[i];

@@ -237,7 +237,7 @@ void UCI::UCI::position(std::istringstream& is)
 		if (debug) logFile << " " << token;
 		//TODO: error checking
 		//std::cout << "info moving" << std::endl;
-		m = board.movefromUCI(token);
+		m = board.moveFromUCI(token);
 		board.makeMove(m);
 	}
 	if (debug) logFile << std::endl;
