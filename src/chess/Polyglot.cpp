@@ -17,19 +17,19 @@ chess::Polyglot::Polyglot(const std::string& path)
 void chess::Polyglot::loadBook(const std::string& path)
 {
 	std::ifstream file;
-	std::ifstream file2;
 	file.open(path, std::ifstream::in | std::ifstream::binary);
-	file2.open(path, std::ifstream::in | std::ifstream::binary);
+    //std::ifstream file2;
+    //file2.open(path, std::ifstream::in | std::ifstream::binary);
 	//std::ifstream file{path};
-	char buffer[16];
+	//char buffer[16];
 	PolyglotEntry entry;
 	BookEntry temp;
-	std::cout << sizeof(entry) << std::endl;
-	std::cout << sizeof(buffer) << std::endl;
+	//std::cout << sizeof(entry) << std::endl;
+	//std::cout << sizeof(buffer) << std::endl;
 	if (!file.fail()) {
 		while (!file.eof())
 		{
-			file2.read((char*)buffer, sizeof(buffer));
+			//file2.read((char*)buffer, sizeof(buffer));
 			//file.close();
 			//file.open(path, std::ios::in | std::ios::binary);
 			file.read((char*)&entry, sizeof(entry));

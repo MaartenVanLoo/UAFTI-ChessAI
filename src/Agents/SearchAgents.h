@@ -12,6 +12,8 @@ namespace chess::SearchAgents{
 	const int draw_value = 0;
 	const int mate_Value = INT_MAX-2000;
 
+	int isMate(int value);
+	int mateIn(int searchdepth, int value);
 	class Quiescence {
 	private:
 	    //used as default parameter;
@@ -1723,6 +1725,8 @@ namespace chess::SearchAgents{
 
             //Initialize return value;
             int value = 0;
+            bool is_mate = false;
+            int mate_in = 0;
 
             //first check polyglot table;
             uint64_t key = chess::ClassicBitBoard::HashUtil::createHash(board);
@@ -1806,7 +1810,7 @@ namespace chess::SearchAgents{
             Move searchMove = bestMove; //no empty move!
             int searchValue;
             int finalDepth = 0;
-            for (int depth = 0; !limits.exceeded(depth); depth++) {
+            for (int depth = 1; !limits.exceeded(depth); depth++) {
                 if (depth == moves.size()) moves.resize((size_t)(moves.size() * 1.5) + 1);
                 this->searchID++;
 
@@ -1823,16 +1827,19 @@ namespace chess::SearchAgents{
                     break;
                 }
                 bestMove = searchMove;
-                value = searchValue;
+                value = board.side?searchValue:-searchValue;
                 finalDepth = depth;
                 getPonder(board, ponder);
+                is_mate = isMate(value);
+                mate_in = mateIn(depth, value);
 
                 limits.nextItt();
-
-                std::cout << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
-                this->logFile << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
+                printIteration(depth,value,bestMove,ponder, is_mate,mate_in);
+                //std::cout << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
+                //this->logFile << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
             }
-            long long unsigned nps = this->nodes;
+            printFinalValues(finalDepth,value,bestMove,ponder,is_mate,mate_in);
+            /*long long unsigned nps = this->nodes;
             if (limits.getElapsed() > 0) {
                 nps = (uint64_t)(this->nodes * 1e3 / limits.getElapsed());
             }
@@ -1851,7 +1858,7 @@ namespace chess::SearchAgents{
                           << " draws " << this->draws
                           << " score cp " << value
                           << " time " << limits.getElapsed()
-                          << std::endl;
+                          << std::endl;*/
             return value;
         }
     private:
@@ -2239,6 +2246,9 @@ namespace chess::SearchAgents{
                 return bestValue;
             }
         }
+
+        void printIteration(int depth, int value, Move& bestMove, Move& ponder, int is_mate=false, int mate_in=0);
+        void printFinalValues(int depth, int value, Move& bestMove, Move& ponder, int is_mate=false, int mate_in=0);
     };
 }
 
