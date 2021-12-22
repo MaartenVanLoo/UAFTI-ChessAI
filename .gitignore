@@ -10,3 +10,9 @@ cmake-build-debug/
 cmake-build-release/
 
 .idea/
+
+src/nn/__pycache__/
+
+cmake-build-release-visual-studio/
+
+cmake-build-debug-visual-studio/

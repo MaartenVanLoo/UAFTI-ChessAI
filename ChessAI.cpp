@@ -45,6 +45,16 @@ void testSearchAgents();
 void polyglot();
 int main()
 {
+    //std::cout << sizeof(chess::TTentry) << std::endl;
+    //chess::ClassicBitBoard board;
+    //std::vector<chess::Move> moves;
+    //board.generate_moves(moves);
+    //std::cout << moves[0] << std::endl;
+    //uint32_t compress = 0;
+    //chess::Move::compress(moves[0],compress);
+    //std::cout << compress << std::endl;
+    //chess::Move::decompress(compress,moves[0]);
+    //std::cout << moves[0] << std::endl;
 	/*chess::ClassicBitBoard board;
 	std::vector<chess::Move> moves;
 	std::string test_SAN = "1.e4 c5 2.Nc3 e6 3.Nf3 a6 4.d4 cxd4 5.Nxd4 Qc7 6.Be2 d6 7.O-O b5 8.Re1 Bb7 9.Bh5 g6 10.Bg4 b4 11.Na4 Nf6 12.Bxe6 fxe6 13.Nxe6 Qd7 14.Nxf8 Rxf8 15.Nb6 Qc6 16.Nxa8 Bxa8 17.Bf4 Rf7 18.Qxd6 Qxd6 19.Bxd6 Nc6 20.Rad1 Rd7 21.f3 Bb7 22.Bc5 Rxd1 23.Rxd1 Nd7 24.Bd6 a5 25.Kf2 Nde5 26.b3 h5 27.Bxe5 Nxe5 28.Rd6 Ke7 29.Rb6 Bc8 30.Ke3 Bd7 31.Kd4 Nc6+ 32.Kd5 Nd8 33.Rxg6 Ne6 34.Ke5 h4 35. f4 Nd8 36.f5 Be8 37.Ra6 a4 38.bxa4 Bf7 39.Ra7+ Ke8 40.Kf4 Bxa2 41.Re7+ Kf8 42.Rc7 Bb1 43.a5 b3 44.cxb3 Bxe4 45.a6";
@@ -477,7 +487,7 @@ void testSearchAgents() {
 
 
 	std::cout << "Simulating game" << std::endl;
-	//simulated 50 move (8 halfmoves) game:
+	//simulated 50 move (8 halfMoves) game:
 	int n = 50 * 2;
 	for (int i = 6; i < std::size(activeAgents); i++) {
 		auto active = activeAgents[i];

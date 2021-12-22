@@ -102,7 +102,7 @@ namespace chess {
         this->EnPassantTarget = newBoard.EnPassantTarget;
         this->rookPin = newBoard.rookPin;
         this->bishopPin = newBoard.bishopPin;
-        this->halfmoves = newBoard.halfmoves;
+        this->halfmoves = newBoard.halfMoves;
         this->state.hasEP = newBoard.hasEP;
         this->state.BCastleL = newBoard.BCastleL;
         this->state.BCastleR = newBoard.BCastleR;
@@ -112,6 +112,11 @@ namespace chess {
         return true;
     }
 
+    void ClassicBitBoard::generate_capture_moves(std::vector<Move>& moves){
+        moves.reserve(10);
+        moves.clear();
+        side ?_generate_capture_moves<true>(moves):_generate_capture_moves<false>(moves);
+    }
     void ClassicBitBoard::generate_moves(std::vector<Move>& moves)
     {
         moves.reserve(35);
@@ -476,7 +481,7 @@ namespace chess {
     {
         uint8_t piece = getMoveOwnPiece(move.flags);
         map rookmask = 0;
-        halfmoves += 1; //castling always increases halfmoves
+        halfmoves += 1; //castling always increases halfMoves
         if constexpr (IsLeft) {
             rookmask = Castle_RookswitchL<IsWhite>();
         }
@@ -505,6 +510,33 @@ namespace chess {
         }
     }
     
+    template<bool IsWhite>
+    inline void ClassicBitBoard::_generate_capture_moves(std::vector<Move>& moves){
+        constexpr bool white = IsWhite;
+        constexpr bool enemy = !IsWhite;
+        if (!checkStatusValid) { initCheckStatus<white>(); }
+
+        map checkmask = checkStatus;
+        map kingban = lookup::King(SquareOf(King<enemy>()));
+        map kingatk = Refresh<IsWhite>(kingban, checkmask);
+
+        if (checkmask == 0xffffffffffffffffull) {
+            __generate_capture_moves<white, false>(kingatk, kingban, checkmask, moves);
+        }
+        else if (checkmask != 0) {
+            __generate_capture_moves<white, true>(kingatk, kingban, checkmask, moves);
+        }
+        else {
+            Bitloop(kingatk) {
+                const square sq = SquareOf(kingatk);
+                if ((1ull << sq) & Enemy<IsWhite>()){
+                    //enemy at'to' square => capture move
+                    moves.emplace_back(IsWhite, King<IsWhite>(), 1ull << sq, encode_flags(0b0000, BoardPiece::bp_King, 0));
+                }
+            }
+        }
+    }
+
     template<bool IsWhite>
     inline void ClassicBitBoard::_generate_moves(std::vector<Move>& moves)
     {
@@ -596,7 +628,7 @@ namespace chess {
             fen += " -";
         }
 
-        //halfmoves
+        //halfMoves
         fen += " " + std::to_string(this->halfmoves);
         
         //fullmoves
@@ -652,7 +684,7 @@ namespace chess {
             }
             //is EP
             else if (this->state.hasEP) {
-                if (this->EnPassantTarget << 8 == to) type = 2; //0b0010
+                if (this->EnPassantTarget << 8 == to && piece == BoardPiece::bp_Pawn) type = 2; //0b0010
             }
         }
         else {
@@ -666,7 +698,7 @@ namespace chess {
             }
             //is EP
             else if (this->state.hasEP) {
-                if (this->EnPassantTarget >> 8 == to) type = 2; //0b0010
+                if (this->EnPassantTarget >> 8 == to && piece == BoardPiece::bp_Pawn) type = 2; //0b0010
             }
         }
         move.IsWhite = this->side;
@@ -680,7 +712,7 @@ namespace chess {
         lan = Move::toLAN(move);
         return true;
     }
-    bool chess::ClassicBitBoard::movefromUCI(const std::string& lan, Move& move) {
+    bool chess::ClassicBitBoard::moveFromUCI(const std::string& lan, Move& move) {
         return LAN2Move(lan, move);
     }
     bool chess::ClassicBitBoard::SAN2Move(const std::string& san, Move& move) {
@@ -826,7 +858,7 @@ namespace chess {
             if (others) {
                 bool row = false, column = false;
                 Bitloop(others) { 
-                    // Multiple 'ohter' pieces with same target square (eg 3 rooks after promotion)
+                    // Multiple 'other' pieces with same target square (eg 3 rooks after promotion)
                     bit p = 1ull << SquareOf(others); // extract single piece from others;
                     if (getRank(p) == getRank(move.from)) {
                         column = true;
@@ -1022,7 +1054,7 @@ namespace chess {
             }
             //is EP
             else if (this->state.hasEP) {
-                if (this->EnPassantTarget << 8 == to) type = 2; //0b0010
+                if (this->EnPassantTarget << 8 == to && piece == BoardPiece::bp_Pawn) type = 2; //0b0010
             }
         }
         else {
@@ -1036,7 +1068,7 @@ namespace chess {
             }
             //is EP
             else if (this->state.hasEP) {
-                if (this->EnPassantTarget >> 8 == to) type = 2; //0b0010
+                if (this->EnPassantTarget >> 8 == to && piece == BoardPiece::bp_Pawn) type = 2; //0b0010
             }
         }
         return Move(this->side, from, to,encode_flags(type,piece,promotion));
@@ -1045,7 +1077,7 @@ namespace chess {
     {
         return move.toLAN();
     }
-    Move chess::ClassicBitBoard::movefromUCI(std::string& lan)
+    Move chess::ClassicBitBoard::moveFromUCI(std::string& lan)
     {
         return LAN2Move(lan);
     }
@@ -1584,8 +1616,234 @@ namespace chess {
     }
 
     template<bool IsWhite, bool inCheck>
-    __forceinline void chess::ClassicBitBoard::__generate_moves(map kingatk, const map kingban, const map Checkmask, std::vector<Move>& moves)
+    __forceinline void chess::ClassicBitBoard::__generate_capture_moves(map kingatk, const map kingban, const map Checkmask, std::vector<Move>& moves)
     {
+        constexpr bool white = IsWhite;
+        uint64_t movecnt = 0;
+
+        const map pinHV = rookPin;
+        const map pinD12 = bishopPin;
+        const map checkmask = ConstCheckmask<inCheck>(Checkmask);
+        const map movableSquare = MoveableSquares<white, inCheck>(checkmask);
+        const map captureSquare = movableSquare & Enemy<IsWhite>();
+        const map epTarget = EnPassantTarget;
+
+
+        //Pawns
+        {
+            const uint64_t pawnsLR = Pawns<white>() & ~pinHV;
+            const uint64_t pawnsHV = Pawns<white>() & ~pinD12;
+
+            //4 basic pawn moves => only 2 remain (Left and Right) for capture moves
+            uint64_t Lpawns = pawnsLR & Pawn_InvertLeft<white>(Enemy<white>() & Pawns_NotRight() & checkmask);
+            uint64_t Rpawns = pawnsLR & Pawn_InvertRight<white>(Enemy<white>() & Pawns_NotLeft() & checkmask);
+
+
+            Pawn_PruneLeft<white>(Lpawns, pinD12);
+            Pawn_PruneRight<white>(Rpawns, pinD12);
+
+            //Enpassant
+            if (state.hasEP) { //EP = always capture!
+                bit EPLpawn = pawnsLR & Pawns_NotLeft() & ((epTarget & checkmask) >> 1);
+                bit EPRpawn = pawnsLR & Pawns_NotRight() & ((epTarget & checkmask) << 1);
+
+                if (EPLpawn | EPRpawn) {
+                    Pawn_PruneLeftEP<white>(EPLpawn, pinD12);
+                    Pawn_PruneRightEP<white>(EPRpawn, pinD12);
+                    if (EPLpawn) {
+                        //Callback_Move::template PawnEnpassantTake<status, depth>(brd, EPLpawn, EPLpawn << 1, Pawn_AttackLeft<white>(EPLpawn));
+                        moves.emplace_back(IsWhite, EPLpawn, Pawn_AttackLeft<white>(EPLpawn),
+                                           encode_flags(0b0010, BoardPiece::bp_Pawn, 0));
+                    }
+                    if (EPRpawn) {
+                        //Callback_Move::template PawnEnpassantTake<status, depth>(brd, EPRpawn, EPRpawn >> 1, Pawn_AttackRight<white>(EPRpawn));
+                        moves.emplace_back(IsWhite, EPRpawn, Pawn_AttackRight<white>(EPRpawn),
+                                           encode_flags(0b0010, BoardPiece::bp_Pawn, 0));
+                    }
+                }
+            }
+
+            //Pawns that can move on te last rank:
+            if ((Lpawns | Rpawns) & Pawns_LastRank<white>()) {
+                uint64_t Promote_Left = Lpawns & Pawns_LastRank<white>();
+                uint64_t Promote_Right = Rpawns & Pawns_LastRank<white>();
+
+                uint64_t NoPromote_Left = Lpawns & ~Pawns_LastRank<white>();
+                uint64_t NoPromote_Right = Rpawns & ~Pawns_LastRank<white>();
+
+                while (Promote_Left) {
+                    const bit pos = PopBit(Promote_Left);
+                    //Callback_Move::template Pawnpromote<status, depth>(brd, pos, Pawn_AttackLeft<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Queen));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Bishop));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Rook));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Knight));
+                }
+                while (Promote_Right) {
+                    const bit pos = PopBit(Promote_Right);
+                    //Callback_Move::template Pawnpromote<status, depth>(brd, pos, Pawn_AttackRight<white>(pos)); 
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Queen));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Bishop));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Rook));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Knight));
+                }
+                while (NoPromote_Left) {
+                    const bit pos = PopBit(NoPromote_Left);
+                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackLeft<white>(pos)); 
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                }
+                while (NoPromote_Right) {
+                    const bit pos = PopBit(NoPromote_Right);
+                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackRight<white>(pos)); 
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                }
+            } else {
+                while (Lpawns) {
+                    const bit pos = PopBit(Lpawns);
+                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackLeft<white>(pos)); 
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                }
+                while (Rpawns) {
+                    const bit pos = PopBit(Rpawns);
+                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackRight<white>(pos)); 
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                }
+            }
+        }
+        //Knightmoves
+        {
+            map knights = Knights<white>() & ~(pinHV | pinD12);
+            Bitloop(knights) {
+                const square sq = SquareOf(knights);
+                map move = lookup::Knight(sq) & captureSquare;
+                while (move) {
+                    const bit to = PopBit(move);
+                    //Callback_Move::template Knightmove<status, depth>(brd, 1ull << sq, to);
+                    moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Knight, 0));
+
+                }
+            }
+        }
+
+        //bishops (and diag pinned queens)
+        const map queens = Queens<white>();
+        {
+            map bishops = Bishops<white>() & ~pinHV;
+
+            map bish_pinned = (bishops | queens) & pinD12;
+            map bish_nopin = bishops & ~pinD12;
+
+            Bitloop(bish_pinned) {
+                const square sq = SquareOf(bish_pinned);
+                map move = lookup::Bishop(sq, Occ) & captureSquare & pinD12;
+
+                map pos = 1ull << sq;
+                if (pos & queens) {
+                    while (move) {
+                        const bit to = PopBit(move);
+                        //Callback_Move::template Queenmove<status, depth>(brd, pos, to);
+                        moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
+                    }
+                }
+                else {
+                    while (move) {
+                        const bit to = PopBit(move);
+                        //Callback_Move::template Bishopmove<status, depth>(brd, pos, to);
+                        moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Bishop, 0));
+                    }
+                }
+            }
+            Bitloop(bish_nopin) {
+                const square sq = SquareOf(bish_nopin);
+                map move = lookup::Bishop(sq, Occ) & captureSquare;
+                while (move) {
+                    const bit to = PopBit(move);
+                    //Callback_Move::template Bishopmove<status, depth>(brd, 1ull << sq, to);
+                    moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Bishop, 0));
+                }
+            }
+        }
+
+        //Rookmoves (and horiz pinned queens)
+        {
+            map rooks = Rooks<white>() & ~pinD12;
+
+            map rook_pinned = (rooks | queens) & pinHV;
+            map rook_nopin = rooks & ~pinHV;
+            Bitloop(rook_pinned) {
+                const square sq = SquareOf(rook_pinned);
+                map move = lookup::Rook(sq, Occ) & captureSquare & pinHV;
+                map pos = 1ull << sq;
+                if (pos & queens) {
+                    while (move) {
+                        const bit to = PopBit(move);
+                        //Callback_Move::template Queenmove<status, depth>(brd, pos, to);
+                        moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
+                    }
+                }
+                else {
+                    while (move) {
+                        const bit to = PopBit(move);
+                        //Callback_Move::template Rookmove<status, depth>(brd, pos, to);
+                        moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Rook, 0));
+                    }
+                }
+            }
+            Bitloop(rook_nopin) {
+                    const square sq = SquareOf(rook_nopin);
+                    map move = lookup::Rook(sq, Occ) & captureSquare;
+                while (move) {
+                    const bit to = PopBit(move);
+                    //Callback_Move::template Rookmove<status, depth>(brd, 1ull << sq, to);
+                    moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Rook, 0));
+                }
+            }
+        }
+
+        //Queen moves
+        {
+            map queens = Queens<white>() & ~(pinHV | pinD12);
+            Bitloop(queens) {
+                const square sq = SquareOf(queens);
+                map atk = lookup::Queen(sq, Occ);
+                map move = atk & captureSquare;
+                while (move) {
+                    const bit to = PopBit(move);
+                    //Callback_Move::template Queenmove<status, depth>(brd, 1ull << sq, to);
+                    moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
+                }
+            }
+        }
+        //KingMoves (put last => lower priority when going over all the moves, other moves are probably better and can cause an earlier cut off
+        {
+            Bitloop(kingatk) {
+                const square sq = SquareOf(kingatk);
+                if (1ull << sq & Enemy<IsWhite>()) {
+                    //only capture moves => enemy must be present at target location
+                    moves.emplace_back(IsWhite, King<IsWhite>(), 1ull << sq,
+                                       encode_flags(0b0000, BoardPiece::bp_King, 0));
+                }
+            }
+            //Castling => never capture
+
+        }
+        return;
+    }
+
+    template<bool IsWhite, bool inCheck>
+    __forceinline void chess::ClassicBitBoard::__generate_moves(map kingatk, const map kingban, const map Checkmask, std::vector<Move>& moves) {
         constexpr bool white = IsWhite;
         uint64_t movecnt = 0;
 
@@ -1624,11 +1882,13 @@ namespace chess {
                     Pawn_PruneRightEP<white>(EPRpawn, pinD12);
                     if (EPLpawn) {
                         //Callback_Move::template PawnEnpassantTake<status, depth>(brd, EPLpawn, EPLpawn << 1, Pawn_AttackLeft<white>(EPLpawn));
-                        moves.emplace_back(IsWhite, EPLpawn, Pawn_AttackLeft<white>(EPLpawn), encode_flags(0b0010, BoardPiece::bp_Pawn, 0));
+                        moves.emplace_back(IsWhite, EPLpawn, Pawn_AttackLeft<white>(EPLpawn),
+                                           encode_flags(0b0010, BoardPiece::bp_Pawn, 0));
                     }
                     if (EPRpawn) {
                         //Callback_Move::template PawnEnpassantTake<status, depth>(brd, EPRpawn, EPRpawn >> 1, Pawn_AttackRight<white>(EPRpawn));
-                        moves.emplace_back(IsWhite, EPRpawn, Pawn_AttackRight<white>(EPRpawn), encode_flags(0b0010, BoardPiece::bp_Pawn, 0));
+                        moves.emplace_back(IsWhite, EPRpawn, Pawn_AttackRight<white>(EPRpawn),
+                                           encode_flags(0b0010, BoardPiece::bp_Pawn, 0));
                     }
                 }
             }
@@ -1638,208 +1898,228 @@ namespace chess {
                 uint64_t Promote_Left = Lpawns & Pawns_LastRank<white>();
                 uint64_t Promote_Right = Rpawns & Pawns_LastRank<white>();
                 uint64_t Promote_Move = Fpawns & Pawns_LastRank<white>();
-            
+
                 uint64_t NoPromote_Left = Lpawns & ~Pawns_LastRank<white>();
                 uint64_t NoPromote_Right = Rpawns & ~Pawns_LastRank<white>();
                 uint64_t NoPromote_Move = Fpawns & ~Pawns_LastRank<white>();
-            
+
                 while (Promote_Left) {
                     const bit pos = PopBit(Promote_Left);
                     //Callback_Move::template Pawnpromote<status, depth>(brd, pos, Pawn_AttackLeft<white>(pos));
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Queen));
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Bishop));
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Rook));
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Knight));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Queen));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Bishop));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Rook));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Knight));
                 }
-                while (Promote_Right) { 
-                    const bit pos = PopBit(Promote_Right);    
-                    //Callback_Move::template Pawnpromote<status, depth>(brd, pos, Pawn_AttackRight<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Queen));
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Bishop));
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Rook));
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Knight));
+                while (Promote_Right) {
+                    const bit pos = PopBit(Promote_Right);
+                    //Callback_Move::template Pawnpromote<status, depth>(brd, pos, Pawn_AttackRight<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Queen));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Bishop));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Rook));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Knight));
                 }
-                while (Promote_Move) { 
-                    const bit pos = PopBit(Promote_Move);     
-                    //Callback_Move::template Pawnpromote<status, depth>(brd, pos, Pawn_Forward<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Queen));
-                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Bishop));
-                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Rook));
-                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos), encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Knight));
+                while (Promote_Move) {
+                    const bit pos = PopBit(Promote_Move);
+                    //Callback_Move::template Pawnpromote<status, depth>(brd, pos, Pawn_Forward<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Queen));
+                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Bishop));
+                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Rook));
+                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos),
+                                       encode_flags(0b0001, BoardPiece::bp_Pawn, BoardPiece::bp_Knight));
                 }
-                while (NoPromote_Left) { 
-                    const bit pos = PopBit(NoPromote_Left);   
-                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackLeft<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos), encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                while (NoPromote_Left) {
+                    const bit pos = PopBit(NoPromote_Left);
+                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackLeft<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
                 }
-                while (NoPromote_Right) { 
-                    const bit pos = PopBit(NoPromote_Right);  
-                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackRight<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos), encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                while (NoPromote_Right) {
+                    const bit pos = PopBit(NoPromote_Right);
+                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackRight<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
                 }
-                while (NoPromote_Move) { 
-                    const bit pos = PopBit(NoPromote_Move);   
-                    //Callback_Move::template Pawnmove<status, depth>(brd, pos, Pawn_Forward<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos), encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                while (NoPromote_Move) {
+                    const bit pos = PopBit(NoPromote_Move);
+                    //Callback_Move::template Pawnmove<status, depth>(brd, pos, Pawn_Forward<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
                 }
-                while (Ppawns) { 
-                    const bit pos = PopBit(Ppawns);           
-                    //Callback_Move::template Pawnpush<status, depth>(brd, pos, Pawn_Forward2<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_Forward2<white>(pos), encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
-                }
-            }
-            else {
-                while (Lpawns) { 
-                    const bit pos = PopBit(Lpawns); 
-                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackLeft<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos), encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
-                }
-                while (Rpawns) { 
-                    const bit pos = PopBit(Rpawns); 
-                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackRight<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos), encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
-                }
-                while (Fpawns) { 
-                    const bit pos = PopBit(Fpawns); 
-                    //Callback_Move::template Pawnmove<status, depth>(brd, pos, Pawn_Forward<white>(pos)); 
-                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos), encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
-                }
-                while (Ppawns) { 
-                    const bit pos = PopBit(Ppawns); 
+                while (Ppawns) {
+                    const bit pos = PopBit(Ppawns);
                     //Callback_Move::template Pawnpush<status, depth>(brd, pos, Pawn_Forward2<white>(pos));
-                    moves.emplace_back(IsWhite, pos, Pawn_Forward2<white>(pos), encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                    moves.emplace_back(IsWhite, pos, Pawn_Forward2<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                }
+            } else {
+                while (Lpawns) {
+                    const bit pos = PopBit(Lpawns);
+                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackLeft<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackLeft<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                }
+                while (Rpawns) {
+                    const bit pos = PopBit(Rpawns);
+                    //Callback_Move::template Pawnatk<status, depth>(brd, pos, Pawn_AttackRight<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_AttackRight<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                }
+                while (Fpawns) {
+                    const bit pos = PopBit(Fpawns);
+                    //Callback_Move::template Pawnmove<status, depth>(brd, pos, Pawn_Forward<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_Forward<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
+                }
+                while (Ppawns) {
+                    const bit pos = PopBit(Ppawns);
+                    //Callback_Move::template Pawnpush<status, depth>(brd, pos, Pawn_Forward2<white>(pos));
+                    moves.emplace_back(IsWhite, pos, Pawn_Forward2<white>(pos),
+                                       encode_flags(0b0000, BoardPiece::bp_Pawn, 0));
                 }
             }
-            
-            //Knightmoves
-            {
-                map knights = Knights<white>() & ~(pinHV | pinD12);
-                Bitloop(knights) {
-                    const square sq = SquareOf(knights);
-                    map move = lookup::Knight(sq) & movableSquare;
-                    while (move) {
-                        const bit to = PopBit(move); 
-                        //Callback_Move::template Knightmove<status, depth>(brd, 1ull << sq, to);
-                        moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Knight, 0));
-                        
-                    }
-                }
-            }
-
-            //bishops (and diag pinned queens)
-            const map queens = Queens<white>();
-            {
-                map bishops = Bishops<white>() & ~pinHV;
-
-                map bish_pinned = (bishops | queens) & pinD12;
-                map bish_nopin = bishops & ~pinD12;
-
-                Bitloop(bish_pinned) {
-                    const square sq = SquareOf(bish_pinned);
-                    map move = lookup::Bishop(sq, Occ) & movableSquare & pinD12;
-
-                    map pos = 1ull << sq;
-                    if (pos & queens) {
-                        while (move) {
-                            const bit to = PopBit(move);
-                            //Callback_Move::template Queenmove<status, depth>(brd, pos, to);
-                            moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
-                        }
-                    }
-                    else {
-                        while (move) {
-                            const bit to = PopBit(move);
-                            //Callback_Move::template Bishopmove<status, depth>(brd, pos, to);
-                            moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Bishop, 0));
-                        }
-                    }
-                }
-                Bitloop(bish_nopin) {
-                    const square sq = SquareOf(bish_nopin);
-                    map move = lookup::Bishop(sq, Occ) & movableSquare;
-                    while (move) {
-                        const bit to = PopBit(move);
-                        //Callback_Move::template Bishopmove<status, depth>(brd, 1ull << sq, to);
-                        moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Bishop, 0));
-                    }
-                }
-            }
-
-            //Rookmoves (and horiz pinned queens)
-            {
-                map rooks = Rooks<white>() & ~pinD12;
-
-                map rook_pinned = (rooks | queens) & pinHV;
-                map rook_nopin = rooks & ~pinHV;
-                Bitloop(rook_pinned) {
-                    const square sq = SquareOf(rook_pinned);
-                    map move = lookup::Rook(sq, Occ) & movableSquare & pinHV;
-                    map pos = 1ull << sq;
-                    if (pos & queens) {
-                        while (move) {
-                            const bit to = PopBit(move); 
-                            //Callback_Move::template Queenmove<status, depth>(brd, pos, to);
-                            moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
-                        }
-                    }
-                    else {
-                        while (move) {
-                            const bit to = PopBit(move);
-                            //Callback_Move::template Rookmove<status, depth>(brd, pos, to);
-                            moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Rook, 0));
-                        }
-                    }
-                }
-                Bitloop(rook_nopin) {
-                        const square sq = SquareOf(rook_nopin);
-                        map move = lookup::Rook(sq, Occ) & movableSquare;
-                    while (move) {
-                        const bit to = PopBit(move);
-                        //Callback_Move::template Rookmove<status, depth>(brd, 1ull << sq, to);
-                        moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Rook, 0));
-                    }
-                }
-            }
-
-            //Queen moves
-            {
-                map queens = Queens<white>() & ~(pinHV | pinD12);
-                Bitloop(queens) {
-                    const square sq = SquareOf(queens);
-                    map atk = lookup::Queen(sq, Occ);
-                    map move = atk & movableSquare;
-                    while (move) {
-                        const bit to = PopBit(move);
-                        //Callback_Move::template Queenmove<status, depth>(brd, 1ull << sq, to);
-                        moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
-                    }
-                }
-            }
-            //KingMoves (put last => lower priority when going over all the moves, other moves are probably better and can cause an earlier cut off
-            {
-                Bitloop(kingatk) {
-                    const square sq = SquareOf(kingatk);
-                    //Callback_Move::template Kingmove<status, depth>(brd, King<white>(brd), 1ull << sq);
-                    moves.emplace_back(IsWhite, King<IsWhite>(), 1ull << sq, encode_flags(0b0000, BoardPiece::bp_King, 0));
-                }
-
-                //Castling
-                if constexpr (!inCheck) {
-                    if (state.canCastleLeft<white>(kingban, Occ, Rooks<white>())) {
-                        //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) << 2), status.Castle_RookswitchL());
-                        moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() << 2, encode_flags(0b0100, BoardPiece::bp_King, 0));
-                    }
-                    if (state.canCastleRigth<white>(kingban, Occ, Rooks<white>())) {
-                        //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) >> 2), status.Castle_RookswitchR());
-                        moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() >> 2, encode_flags(0b1000, BoardPiece::bp_King, 0));
-                    }
-                }
-            }
-
-            return;
-
         }
 
+        //Castling
+        {
+            if constexpr (!inCheck) {
+                if (state.canCastleLeft<white>(kingban, Occ, Rooks<white>())) {
+                    //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) << 2), status.Castle_RookswitchL());
+                    moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() << 2,
+                                       encode_flags(0b0100, BoardPiece::bp_King, 0));
+                }
+                if (state.canCastleRight<white>(kingban, Occ, Rooks<white>())) {
+                    //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) >> 2), status.Castle_RookswitchR());
+                    moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() >> 2,
+                                       encode_flags(0b1000, BoardPiece::bp_King, 0));
+                }
+            }
+        }
+        //Knightmoves
+        {
+            map knights = Knights<white>() & ~(pinHV | pinD12);
+            Bitloop(knights) {
+                const square sq = SquareOf(knights);
+                map move = lookup::Knight(sq) & movableSquare;
+                while (move) {
+                    const bit to = PopBit(move);
+                    //Callback_Move::template Knightmove<status, depth>(brd, 1ull << sq, to);
+                    moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Knight, 0));
+
+                }
+            }
+        }
+
+        //bishops (and diag pinned queens)
+        const map queens = Queens<white>();
+        {
+            map bishops = Bishops<white>() & ~pinHV;
+
+            map bish_pinned = (bishops | queens) & pinD12;
+            map bish_nopin = bishops & ~pinD12;
+
+            Bitloop(bish_pinned) {
+                const square sq = SquareOf(bish_pinned);
+                map move = lookup::Bishop(sq, Occ) & movableSquare & pinD12;
+
+                map pos = 1ull << sq;
+                if (pos & queens) {
+                    while (move) {
+                        const bit to = PopBit(move);
+                        //Callback_Move::template Queenmove<status, depth>(brd, pos, to);
+                        moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
+                    }
+                }
+                else {
+                    while (move) {
+                        const bit to = PopBit(move);
+                        //Callback_Move::template Bishopmove<status, depth>(brd, pos, to);
+                        moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Bishop, 0));
+                    }
+                }
+            }
+            Bitloop(bish_nopin) {
+                const square sq = SquareOf(bish_nopin);
+                map move = lookup::Bishop(sq, Occ) & movableSquare;
+                while (move) {
+                    const bit to = PopBit(move);
+                    //Callback_Move::template Bishopmove<status, depth>(brd, 1ull << sq, to);
+                    moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Bishop, 0));
+                }
+            }
+        }
+
+        //Rookmoves (and horiz pinned queens)
+        {
+            map rooks = Rooks<white>() & ~pinD12;
+
+            map rook_pinned = (rooks | queens) & pinHV;
+            map rook_nopin = rooks & ~pinHV;
+            Bitloop(rook_pinned) {
+                const square sq = SquareOf(rook_pinned);
+                map move = lookup::Rook(sq, Occ) & movableSquare & pinHV;
+                map pos = 1ull << sq;
+                if (pos & queens) {
+                    while (move) {
+                        const bit to = PopBit(move);
+                        //Callback_Move::template Queenmove<status, depth>(brd, pos, to);
+                        moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
+                    }
+                }
+                else {
+                    while (move) {
+                        const bit to = PopBit(move);
+                        //Callback_Move::template Rookmove<status, depth>(brd, pos, to);
+                        moves.emplace_back(IsWhite, pos, to, encode_flags(0b0000, BoardPiece::bp_Rook, 0));
+                    }
+                }
+            }
+            Bitloop(rook_nopin) {
+                    const square sq = SquareOf(rook_nopin);
+                    map move = lookup::Rook(sq, Occ) & movableSquare;
+                while (move) {
+                    const bit to = PopBit(move);
+                    //Callback_Move::template Rookmove<status, depth>(brd, 1ull << sq, to);
+                    moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Rook, 0));
+                }
+            }
+        }
+
+        //Queen moves
+        {
+            map queens = Queens<white>() & ~(pinHV | pinD12);
+            Bitloop(queens) {
+                const square sq = SquareOf(queens);
+                map atk = lookup::Queen(sq, Occ);
+                map move = atk & movableSquare;
+                while (move) {
+                    const bit to = PopBit(move);
+                    //Callback_Move::template Queenmove<status, depth>(brd, 1ull << sq, to);
+                    moves.emplace_back(IsWhite, 1ull << sq, to, encode_flags(0b0000, BoardPiece::bp_Queen, 0));
+                }
+            }
+        }
+        //KingMoves (put last => lower priority when going over all the moves, other moves are probably better and can cause an earlier cut off
+        {
+            Bitloop(kingatk) {
+                const square sq = SquareOf(kingatk);
+                //Callback_Move::template Kingmove<status, depth>(brd, King<white>(brd), 1ull << sq);
+                moves.emplace_back(IsWhite, King<IsWhite>(), 1ull << sq, encode_flags(0b0000, BoardPiece::bp_King, 0));
+            }
+        }
+
+        return;
     }
 
     template<bool IsWhite>
@@ -1855,7 +2135,7 @@ namespace chess {
         else if (pr & King<white>()) checkStatus = Pawn_AttackLeft<white>(King<white>());
         else checkStatus = 0xffffffffffffffffull;
 
-        //Calculate Check from enmey knights
+        //Calculate Check from enemy knights
         map knightcheck = lookup::Knight(SquareOf(King<white>()))& Knights<enemy>();
         if (knightcheck) checkStatus = knightcheck;
     }
@@ -2136,9 +2416,20 @@ namespace chess {
         return lan;
     }
 
-    uint16_t chess::Move::compress(Move move)
+    void chess::Move::compress(Move &move,uint32_t &compressed)
     {
-        return uint16_t();
+        compressed = 0;
+        compressed ^= move.flags;       //Lowest half;
+        compressed ^= move.IsWhite << 31; //MSB
+        compressed ^= (uint8_t)(SquareOf(move.from)) << 16;
+        compressed ^= (uint8_t)(SquareOf(move.to))   << 24; //MAx 64 => MSB never written
+    }
+
+    void chess::Move::decompress(uint32_t& compressed, Move& move) {
+        move.flags = compressed & 0xFFFF;
+        move.from = 1ull << ((compressed >> 16) & 0xFF);
+        move.to   = 1ull << ((compressed >> 24) & 0x7F);
+        move.IsWhite = compressed >> 31;
     }
 
     bool operator==(const Move& move1, const Move& move2)
@@ -2149,7 +2440,9 @@ namespace chess {
         if (move1.flags != move2.flags) return false;
         return true;
     }
-    #pragma endregion
+
+
+#pragma endregion
 
     /**************************\
 
@@ -2271,7 +2564,7 @@ namespace chess {
         return false;
     }
     template <bool IsWhite>
-    _InlineConstExpr bool chess::ClassicBitBoard::BoardState::canCastleRigth(map attacked, map occupied, map rook)
+    _InlineConstExpr bool chess::ClassicBitBoard::BoardState::canCastleRight(map attacked, map occupied, map rook)
     {
         if constexpr (IsWhite) {
             if (WCastleR) {
@@ -2313,7 +2606,7 @@ namespace chess {
         this->EnPassantTarget = brd.EnPassantTarget;
         this->rookPin = brd.rookPin;
         this->bishopPin = brd.bishopPin;
-        this->halfmoves = brd.halfmoves;
+        this->halfMoves = brd.halfmoves;
         this->hasEP = brd.state.hasEP;
         this->BCastleL = brd.state.BCastleL;
         this->BCastleR = brd.state.BCastleR;
@@ -2343,7 +2636,7 @@ namespace chess {
         this->EnPassantTarget = h.EnPassantTarget;
         this->rookPin = h.rookPin;
         this->bishopPin = h.bishopPin;
-        this->halfmoves = h.halfmoves;
+        this->halfMoves = h.halfMoves;
         this->hasEP = h.hasEP;
         this->BCastleL = h.BCastleL;
         this->BCastleR = h.BCastleR;

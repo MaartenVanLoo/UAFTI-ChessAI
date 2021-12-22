@@ -4,7 +4,7 @@ UCI::Limits::Limits() = default;
 
 void UCI::Limits::setDefault()
 {
-	this->depth = -1;
+	this->depth = -1; //TODO: set 250?
 	this->startTime = std::chrono::steady_clock::now();
 	this->btime = -1;
 	this->wtime = -1;
@@ -17,6 +17,11 @@ void UCI::Limits::setDefault()
 	this->elapsed = 0;
 
 }
+
+void UCI::Limits::stopSearch() {
+    this->maxSearchTime = 0;
+}
+
 
 long long UCI::Limits::getElapsed()
 {
@@ -69,7 +74,7 @@ bool UCI::Limits::exceeded(int depth)
 	if (this->maxSearchTime != -1) {
 		if (elapsed >= maxSearchTime) return true;
 		//if last iteration took longer than 1/4th of the remaining time => finish search, next itt will probably not be able to finish;
-		if (lastItt > (maxSearchTime - elapsed) / 4) return true;
+		if (lastItt > (maxSearchTime - elapsed) / 4 && (btime != -1 || wtime != -1)) return true;
 	}
 	return false;
 }

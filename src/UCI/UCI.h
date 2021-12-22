@@ -28,11 +28,13 @@ namespace UCI {
 		chess::ClassicBitBoard board;
 		//chess::SearchAgents::AlphaBeta searchAgent;
 		//chess::SearchAgents::IttAlphaBeta searchAgent;
-		chess::SearchAgents::PVS searchAgent;
+		//chess::SearchAgents::PVS searchAgent;
+		chess::SearchAgents::PVSRazoring searchAgent;
 		chess::BetterAgent evalAgent;
 		UCIOptions options;
 		chess::Move bestmove;
 		chess::Move ponder;
+        std::future<void> ponder_future;
 
 		std::ofstream logFile;
 		bool debug = true;
@@ -61,6 +63,10 @@ namespace UCI {
 		void go(std::istringstream& is);
 		void newgame();
 		void position(std::istringstream& is);
+
+		void ponderStart();
+		void ponderStop();
+		void ponderSearch(chess::Move bestMove,chess::Move ponder);
 
 	};
 }
