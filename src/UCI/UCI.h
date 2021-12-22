@@ -61,7 +61,9 @@ namespace UCI {
 		void go(std::istringstream& is);
 		void newgame();
 		void position(std::istringstream& is);
-
+        void ponderSearch(chess::Move bestmove, chess::Move pondermove);
+        void ponderStart();
+        void ponderStop();
 	};
 }
 

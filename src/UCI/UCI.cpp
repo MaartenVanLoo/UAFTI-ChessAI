@@ -241,3 +241,37 @@ void UCI::UCI::position(std::istringstream& is)
 	}
 	if (debug) logFile << std::endl;
 }
+
+
+// deeplearning branch tread bom
+// ches::move
+//refeentie naar search agent
+// max searchtime om te stoppen op 0 zetten
+void UCI::UCI::ponderSearch(chess::Move bestmove,chess::Move pondermove) {
+//
+    chess::Move dummy;
+    if (pondermove.to == pondermove.from) {//empty move
+        board.makeMove(bestmove);
+        this->searchAgent.search<chess::BetterAgent>(board, pondermove, dummy);
+        board.undoMove();
+    }  //if not empty
+    else {
+        board.makeMove(bestmove);
+        board.makeMove(pondermove);
+        this->searchAgent.search<chess::BetterAgent>(board, pondermove, dummy);
+        board.undoMove();
+        board.undoMove();
+    }
+}
+
+void UCI::UCI::ponderStop() {
+    this->searchAgent.limits.exceededTime();
+}
+
+void UCI::UCI::ponderStart() {
+    std::async(&UCI::UCI::ponderSearch(bestmove, ponder));
+}
+
+//while (pondering){
+  //    ponder();
+//}
