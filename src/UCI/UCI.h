@@ -34,6 +34,7 @@ namespace UCI {
 		UCIOptions options;
 		chess::Move bestmove;
 		chess::Move ponder;
+        std::future<void> ponder_future;
 
 		std::ofstream logFile;
 		bool debug = true;
@@ -62,6 +63,10 @@ namespace UCI {
 		void go(std::istringstream& is);
 		void newgame();
 		void position(std::istringstream& is);
+
+		void ponderStart();
+		void ponderStop();
+		void ponderSearch(chess::Move bestMove,chess::Move ponder);
 
 	};
 }

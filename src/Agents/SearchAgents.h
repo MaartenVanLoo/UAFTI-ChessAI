@@ -1663,7 +1663,7 @@ namespace chess::SearchAgents{
 
     class PVSRazoring{
         Polyglot book;
-        std::vector<int> razorMargin = {0,250,350,500};
+        std::vector<int> razorMargin = {0,1000,1400,2700};
     public:
         // counters
         uint8_t searchID = 0; //increment every time a new search is started, overflow at the end => not a problem.
@@ -1759,6 +1759,7 @@ namespace chess::SearchAgents{
                 board.makeMove(bestMove);
                 value = board.side ? EvalAgent::eval<true>(board) : EvalAgent::eval<false>(board);
                 board.undoMove();
+                printIteration(1,board.side?value:-value,bestMove,ponder, false,0);
                 return value;
             }
             //mate in 1?
@@ -1771,6 +1772,7 @@ namespace chess::SearchAgents{
                         board.undoMove();
                         bestMove = move;
                         ponder = Move();
+                        printIteration(1,0,bestMove,ponder, true,1);
                         return -mate_Value;//MATE
                     }
                 }
@@ -1780,6 +1782,7 @@ namespace chess::SearchAgents{
                         board.undoMove();
                         bestMove = move;
                         ponder = Move();
+                        printIteration(1,0,bestMove,ponder, true,1);
                         return mate_Value; //MATE
                     }
                 }
@@ -1873,7 +1876,6 @@ namespace chess::SearchAgents{
             //if time limis is exceeded cuase the parent node to "CUT".
             //return "0" could cause undefined behavior (might be better compared to actual value)
             if (this->limits.exceededTime()) {
-                std::cout << "time exceeded" << std::endl;
                 return side?INT_MAX : INT_MIN;
             }
 

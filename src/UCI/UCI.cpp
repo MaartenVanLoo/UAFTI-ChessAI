@@ -36,16 +36,21 @@ void UCI::UCI::start()
 	std::string token, cmd;
 
 	do {
-		if (!std::getline(std::cin, cmd)) {
-			cmd = "quit";
-		}
-		std::istringstream is(cmd);
-		token.clear();
+        if (!std::getline(std::cin, cmd)) {
+            cmd = "quit";
+        }
+        std::istringstream is(cmd);
+        token.clear();
 
-		is >> std::skipws >> token; // skipws = skip leading white space
-		if (debug) logFile << "Recieved: " << token;
+        is >> std::skipws >> token; // skipws = skip leading white space
+        if (debug) logFile << "Recieved: " << token;
 
-		if (token == "quit" || token == "stop") {
+        if (token == "quit"){
+            std::cout << "info: quit" << std::endl;
+            if (debug) logFile  << "\nAnswer: "<<  "info: quit" << std::endl;
+        }
+        else if (token == "stop") {
+            this->ponderStop();
 			std::cout << "info: stop" << std::endl;
 			if (debug) logFile  << "\nAnswer: "<<  "info: stop" << std::endl;
 		}
@@ -69,15 +74,20 @@ void UCI::UCI::start()
 		}
 		else if (token == "go") {
 			go(is);
+			ponderStart();
 		}
 		else if (token == "position") {
-			position(is);
+			ponderStop();
+		    position(is);
 		}
 		else if (token == "ucinewgame") {
 			newgame();
 		}
 		else if (token == "isready") {
-			std::cout << "readyok" << std::endl;
+		    //TODO:Maybe reset some variables, clear TT (no collisions??)
+			searchAgent.TTtable.clear();
+			searchAgent.searchID = 0;
+		    std::cout << "readyok" << std::endl;
 			if (debug) logFile << "\nAnswer: " << "readyok" << std::endl;
 		}
 		else if (token == "d") {
@@ -191,7 +201,6 @@ void UCI::UCI::go(std::istringstream& is)
 			//logFile << "Nodes/s          : " << (elapsedmilliseconds == 0 ? searchAgent.nodes : uint64_t(searchAgent.nodes / (elapsedmilliseconds + 0.000000001))) << " kN/s\n" << std::endl;
 			logFile << "Halfmoves        : " << this->board.halfmoves << std::endl;
 		}
-
 		//after go => compute book moves async;
 		//polyglot_thread = bookPonder.computePonderAsync(board);
 		//board.makeMove(bestmove);
@@ -212,12 +221,12 @@ void UCI::UCI::position(std::istringstream& is)
 	//std::cout << "info position" << std::endl;
 	chess::Move m; 
 	std::string token, fen;
+	bool startpos = false;
 	is >> token;
 	if (debug) logFile << " " << token;
 	if (token == "startpos") {
 		//board.reset();
 		board = chess::ClassicBitBoard(chess::ClassicBitBoard::startpos);
-		board = chess::ClassicBitBoard();
 		is >> token;
 		if (debug) logFile << " " << token;
 	}
@@ -236,9 +245,48 @@ void UCI::UCI::position(std::istringstream& is)
 	while (is >> token) {
 		if (debug) logFile << " " << token;
 		//TODO: error checking
-		//std::cout << "info moving" << std::endl;
-		m = board.moveFromUCI(token);
-		board.makeMove(m);
+		try{
+            m = board.moveFromUCI(token);
+        }catch(std::exception& e){
+		    //Error in parsing move
+            board = chess::ClassicBitBoard(chess::ClassicBitBoard::startpos);
+            if (debug) logFile << "PARSE ERROR";
+		    break;
+		}
+        board.makeMove(m);
 	}
 	if (debug) logFile << std::endl;
 }
+
+void UCI::UCI::ponderStart() {
+    if (!options.ponder) return;
+    this->searchAgent.limits.setDefault();
+    this->ponder_future = std::async(&UCI::UCI::ponderSearch,this,this->bestmove,this->ponder);
+}
+
+void UCI::UCI::ponderStop() {
+    if (!options.ponder) return;
+    this->searchAgent.limits.stopSearch();
+    if (this->ponder_future.valid()){
+        this->ponder_future.wait();
+    }
+    this->searchAgent.limits.setDefault();
+}
+
+void UCI::UCI::ponderSearch(chess::Move bestMove, chess::Move ponderMove) {
+    chess::Move dummy;
+    if (ponderMove.to == ponderMove.from){ //null move
+        board.makeMove(bestMove);
+        this->searchAgent.search<chess::BetterAgent>(this->board, dummy,ponderMove);
+        board.undoMove();
+    }else{
+        board.makeMove(bestMove);
+        board.makeMove(ponderMove);
+        this->searchAgent.search<chess::BetterAgent>(this->board, dummy,ponderMove);
+        board.undoMove();
+        board.undoMove();
+    }
+}
+
+
+

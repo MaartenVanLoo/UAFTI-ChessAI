@@ -1843,8 +1843,7 @@ namespace chess {
     }
 
     template<bool IsWhite, bool inCheck>
-    __forceinline void chess::ClassicBitBoard::__generate_moves(map kingatk, const map kingban, const map Checkmask, std::vector<Move>& moves)
-    {
+    __forceinline void chess::ClassicBitBoard::__generate_moves(map kingatk, const map kingban, const map Checkmask, std::vector<Move>& moves) {
         constexpr bool white = IsWhite;
         uint64_t movecnt = 0;
 
@@ -1991,6 +1990,22 @@ namespace chess {
                 }
             }
         }
+
+        //Castling
+        {
+            if constexpr (!inCheck) {
+                if (state.canCastleLeft<white>(kingban, Occ, Rooks<white>())) {
+                    //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) << 2), status.Castle_RookswitchL());
+                    moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() << 2,
+                                       encode_flags(0b0100, BoardPiece::bp_King, 0));
+                }
+                if (state.canCastleRight<white>(kingban, Occ, Rooks<white>())) {
+                    //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) >> 2), status.Castle_RookswitchR());
+                    moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() >> 2,
+                                       encode_flags(0b1000, BoardPiece::bp_King, 0));
+                }
+            }
+        }
         //Knightmoves
         {
             map knights = Knights<white>() & ~(pinHV | pinD12);
@@ -2101,18 +2116,6 @@ namespace chess {
                 const square sq = SquareOf(kingatk);
                 //Callback_Move::template Kingmove<status, depth>(brd, King<white>(brd), 1ull << sq);
                 moves.emplace_back(IsWhite, King<IsWhite>(), 1ull << sq, encode_flags(0b0000, BoardPiece::bp_King, 0));
-            }
-
-            //Castling
-            if constexpr (!inCheck) {
-                if (state.canCastleLeft<white>(kingban, Occ, Rooks<white>())) {
-                    //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) << 2), status.Castle_RookswitchL());
-                    moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() << 2, encode_flags(0b0100, BoardPiece::bp_King, 0));
-                }
-                if (state.canCastleRight<white>(kingban, Occ, Rooks<white>())) {
-                    //Callback_Move::template KingCastle<status, depth>(brd, (King<white>(brd) | King<white>(brd) >> 2), status.Castle_RookswitchR());
-                    moves.emplace_back(IsWhite, King<IsWhite>(), King<IsWhite>() >> 2, encode_flags(0b1000, BoardPiece::bp_King, 0));
-                }
             }
         }
 

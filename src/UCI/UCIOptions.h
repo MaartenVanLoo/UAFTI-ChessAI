@@ -8,6 +8,7 @@ namespace UCI {
 	class UCIOptions
 	{
 	public:
+	    bool ponder = true;
 		UCIOptions();
 
 		std::string listOptions();

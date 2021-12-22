@@ -20,6 +20,7 @@ namespace UCI {
 
 		Limits();
 		void setDefault();
+		void stopSearch();
 		long long getElapsed();
 		long long elapsedSinceStart() const;
 		long long elapsedMicrosecondsSinceStart() const;

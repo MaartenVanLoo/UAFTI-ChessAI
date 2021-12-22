@@ -4,7 +4,7 @@ UCI::Limits::Limits() = default;
 
 void UCI::Limits::setDefault()
 {
-	this->depth = -1;
+	this->depth = -1; //TODO: set 250?
 	this->startTime = std::chrono::steady_clock::now();
 	this->btime = -1;
 	this->wtime = -1;
@@ -17,6 +17,11 @@ void UCI::Limits::setDefault()
 	this->elapsed = 0;
 
 }
+
+void UCI::Limits::stopSearch() {
+    this->maxSearchTime = 0;
+}
+
 
 long long UCI::Limits::getElapsed()
 {
