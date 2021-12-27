@@ -1297,6 +1297,22 @@ namespace chess::SearchAgents{
                 std::cout << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
                 this->logFile << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
             }
+            //Legal check
+            board.generate_moves(moves[0]);
+            bool found = false;
+            for (Move& m: moves[0]){
+                if (bestMove == m){
+                    found = true;
+                    break;
+                }
+            }
+            // Output always legal!
+            if (!found){
+                std::cout << "info illegal move" << bestMove << "\n";
+                bestMove = moves[0][0];
+                std::cout << "info selecting new move:" << bestMove << "\n";
+            }
+
             long long unsigned nps = this->nodes;
             if (limits.getElapsed() > 0) {
                 nps = (uint64_t)(this->nodes * 1e3 / limits.getElapsed());
@@ -1317,6 +1333,7 @@ namespace chess::SearchAgents{
                           << " score cp " << value
                           << " time " << limits.getElapsed()
                           << std::endl;
+
             return value;
         }
     private:
