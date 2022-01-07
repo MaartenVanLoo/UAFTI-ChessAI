@@ -1178,6 +1178,7 @@ namespace chess::SearchAgents{
             limits.startSearch(board.side);
 
             //reset counters
+            this->logFile.clear();
             this->logFile.str("");
             this->nodes = 0;
             this->threefold = 0;
@@ -1298,7 +1299,6 @@ namespace chess::SearchAgents{
                 //mate_in = mateIn(depth, value);
 
                 limits.nextItt();
-                std::cout << "Research: " << this->research << std::endl;
                 std::cout << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
                 this->logFile << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
             }

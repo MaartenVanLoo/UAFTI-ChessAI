@@ -156,32 +156,11 @@ void UCI::UCI::go(std::istringstream& is)
 	}
 	else {	
 		int value;
-		/*
-		uint64_t key = chess::ClassicBitBoard::HashUtil::createHash(board);
-		if (this->book.getMove(key, bestmove, board)) {
-			//std::cout << "info: theory hit" << std::endl;
-			this->ponder = chess::Move();
-			//get eval to return this value
-			board.makeMove(bestmove);
-			value = this->board.side ? chess::BetterAgent::eval<true>(board) : chess::BetterAgent::eval<false>(board);
-			board.undoMove();
-		}
-		// else => search tree
-		else {			
-			//std::cout << "info: theory miss" << std::endl;
-			if (this->board.side)
-				value = searchAgent.alphabeta<chess::BetterAgent, true>(this->board, depth, this->bestmove, this->ponder);
-			else
-				value = searchAgent.alphabeta<chess::BetterAgent, false>(this->board, depth, this->bestmove, this->ponder);
-		}*/		
-		
-		/*std::cout << "info depth " << depth
-			<< " nodes " << searchAgent.nodes
-			<< " nps " << (long long unsigned)(searchAgent.nodes * 1e6) / elapsedmicroseconds
-			<< " mates " << searchAgent.mates
-			<< " time " << elapsedmilliseconds
-			<< std::endl;*/
+
+		//Search
 		value = searchAgent.search<chess::BetterAgent>(board, bestmove, ponder);
+
+		//Output
 		std::cout << "bestmove " << bestmove.toLAN() << " ponder " << ponder.toLAN() << std::endl;
 		if (debug) {
 			logFile << searchAgent.logFile.str();
@@ -192,24 +171,18 @@ void UCI::UCI::go(std::istringstream& is)
 				<< " mates " << searchAgent.mates
 				<< " time " << elapsedmilliseconds
 				<< std::endl;*/
-			logFile << "\nAnswer: " << "bestmove " << bestmove.toLAN() << " ponder " << ponder.toLAN() << std::endl;
-			logFile << "Alpha beta:" << std::endl;
-			logFile << "Best move eval:" << value << std::endl;
-			logFile << "Best move     :" << this->board.Move2SAN(bestmove) << std::endl;
-			logFile << "Nodes evaluated  : " << uint64_t(searchAgent.nodes) << std::endl;
-			logFile << "Mates found      : " << uint64_t(searchAgent.mates) << std::endl;
-			logFile << "Draws found      : " << uint64_t(searchAgent.draws) << std::endl;
-			logFile << "Repetitions found: " << uint64_t(searchAgent.threefold) << std::endl;
-			//logFile << "Time difference  : " << elapsedmilliseconds / 1000 << " [s]" << std::endl;
-			//logFile << "Nodes/s          : " << (elapsedmilliseconds == 0 ? searchAgent.nodes : uint64_t(searchAgent.nodes / (elapsedmilliseconds + 0.000000001))) << " kN/s\n" << std::endl;
+			logFile << "\nAnswer: " << "bestmove " << bestmove.toLAN() << " ponder " << ponder.toLAN() << "\n";
+			logFile << "Alpha beta:" << "\n";
+			logFile << "Best move eval:" << value << "\n";
+			logFile << "Best move     :" << this->board.Move2SAN(bestmove) << "\n";
+			logFile << "Nodes evaluated  : " << uint64_t(searchAgent.nodes) << "\n";
+			logFile << "Mates found      : " << uint64_t(searchAgent.mates) << "\n";
+			logFile << "Draws found      : " << uint64_t(searchAgent.draws) << "\n";
+			logFile << "Repetitions found: " << uint64_t(searchAgent.threefold) << "\n";
+			//logFile << "Time difference  : " << elapsedmilliseconds / 1000 << " [s]" << "\n";
+			//logFile << "Nodes/s          : " << (elapsedmilliseconds == 0 ? searchAgent.nodes : uint64_t(searchAgent.nodes / (elapsedmilliseconds + 0.000000001))) << " kN/s\n" << "\n";
 			logFile << "Halfmoves        : " << this->board.halfmoves << std::endl;
 		}
-		//after go => compute book moves async;
-		//polyglot_thread = bookPonder.computePonderAsync(board);
-		//board.makeMove(bestmove);
-		//this->polyglotPonder = std::async(std::launch::async, &chess::PolyglotPonder::computePonder,std::ref(bookPonder),board);
-		//board.undoMove();
-        //Werkt niet: std::async(std::launch::async, &chess::SearchAgents::PVS::search<chess::BetterAgent, true>,std::ref(board),std::ref(bestmove), std::ref(ponder),std::ref(stopFlag));
 	}
 }
 
