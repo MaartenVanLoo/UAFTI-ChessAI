@@ -43,7 +43,7 @@ namespace UCI {
 		std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 		std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-		std::string ID = "FTI UA 5-AI-Engine";
+		std::string ID = "Bezige Bijtjes - Engine";
 		
 		//polyglot book;
 		const std::string polyglotBook = "gm2600.bin";
