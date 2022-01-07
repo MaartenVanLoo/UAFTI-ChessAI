@@ -214,6 +214,7 @@ namespace chess {
                 }
                 else {
                     //create new element
+                    //TODO: reuse element
                     History t(brd);
                     history.push_back(t);
                 }

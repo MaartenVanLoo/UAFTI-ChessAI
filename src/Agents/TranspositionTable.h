@@ -36,7 +36,8 @@ namespace chess{
 		
 		
 		__forceinline void update(uint64_t key,uint8_t ID,TTtype type, int eval, int depth, Move& move) {
-			uint64_t index = key % this->maxEntries;
+            uint64_t index = key & this->mask;
+            //uint64_t index = key % this->maxEntries;
 			if (key != TTable[index].hash && TTable[index].hash != 0) {
 				if (ID == TTable[index].ID) {
 					this->collisions++;

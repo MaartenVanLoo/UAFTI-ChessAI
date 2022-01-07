@@ -13,6 +13,7 @@ namespace chess {
     ClassicBitBoard::ClassicBitBoard()
     {
         parse_fen(chess::ClassicBitBoard::startpos);
+        //TODO: investigate the use of _mm256_xor_epi64 or _mm_xor_epi64 from AVX-512 instruction set
         White = WPawn | WBishop | WKnight | WRook | WKing | WQueen;
         Black = BPawn | BBishop | BKnight | BRook | BKing | BQueen;
         Occ = White | Black;
@@ -21,6 +22,7 @@ namespace chess {
     ClassicBitBoard::ClassicBitBoard(std::string fen)
     {
         parse_fen(fen);
+        //TODO: investigate the use of _mm256_xor_epi64 or _mm_xor_epi64 from AVX-512 instruction set
         White = WPawn | WBishop | WKnight | WRook | WKing | WQueen;
         Black = BPawn | BBishop | BKnight | BRook | BKing | BQueen;
         Occ = White | Black;
@@ -29,6 +31,7 @@ namespace chess {
     ClassicBitBoard::ClassicBitBoard(std::string fen, int historySize)
     {
         parse_fen(fen);
+        //TODO: investigate the use of _mm256_xor_epi64 or _mm_xor_epi64 from AVX-512 instruction set
         White = WPawn | WBishop | WKnight | WRook | WKing | WQueen;
         Black = BPawn | BBishop | BKnight | BRook | BKing | BQueen;
         Occ = White | Black;
@@ -72,6 +75,7 @@ namespace chess {
         default:
             break;
         }
+        //TODO: investigate the use of _mm256_xor_epi64 or _mm_xor_epi64 from AVX-512 instruction set
         White = WPawn | WBishop | WKnight | WRook | WKing | WQueen;
         Black = BPawn | BBishop | BKnight | BRook | BKing | BQueen;
         Occ = White | Black;

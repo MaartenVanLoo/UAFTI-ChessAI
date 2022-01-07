@@ -112,8 +112,11 @@ void UCI::UCI::start()
 void UCI::UCI::init()
 {
 	board = chess::ClassicBitBoard(chess::ClassicBitBoard::startpos);
-	//searchAgent = chess::SearchAgents::PVS();
-	searchAgent = chess::SearchAgents::PVSRazoring();
+	//searchAgent = chess::SearchAgents::Minimax();
+	//searchAgent = chess::SearchAgents::AlphaBeta();
+	//searchAgent = chess::SearchAgents::IttAlphaBeta();
+	searchAgent = chess::SearchAgents::PVS();
+	//searchAgent = chess::SearchAgents::PVSRazoring();
 	evalAgent = chess::BetterAgent();
 	options = UCIOptions();	
 	book = chess::Polyglot(this->polyglotBook);

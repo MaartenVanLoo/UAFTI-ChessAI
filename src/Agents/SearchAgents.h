@@ -914,7 +914,7 @@ namespace chess::SearchAgents{
 			Move searchMove = bestMove; //no empty move!
 			int searchValue;
 			int finalDepth = 0;
-			for (int depth = 0; !limits.exceeded(depth); depth++) {
+			for (int depth = 1; !limits.exceeded(depth); depth++) {
 				if (depth == moves.size()) moves.resize((size_t)(moves.size() * 1.5) + 1);
                 this->searchID++;
 
@@ -1271,7 +1271,7 @@ namespace chess::SearchAgents{
             Move searchMove = bestMove; //no empty move!
             int searchValue;
             int finalDepth = 0;
-            for (int depth = 0; !limits.exceeded(depth); depth++) {
+            for (int depth = 1; !limits.exceeded(depth); depth++) {
                 if (depth == moves.size()) moves.resize((size_t)(moves.size() * 1.5) + 1);
                 this->searchID++;
 
@@ -1287,10 +1287,13 @@ namespace chess::SearchAgents{
                     // alpha beta search was terminated prematurely => results not complete
                     break;
                 }
+
                 bestMove = searchMove;
-                value = searchValue;
+                value = board.side?searchValue:-searchValue;
                 finalDepth = depth;
                 getPonder(board, ponder);
+                //is_mate = isMate(value);
+                //mate_in = mateIn(depth, value);
 
                 limits.nextItt();
 
@@ -1347,7 +1350,7 @@ namespace chess::SearchAgents{
             //if time limis is exceeded cuase the parent node to "CUT".
             //return "0" could cause undefined behavior (might be better compared to actual value)
             if (this->limits.exceededTime()) {
-                std::cout << "time exceeded" << std::endl;
+                //std::cout << "time exceeded" << std::endl;
                 return side?INT_MAX : INT_MIN;
             }
 
