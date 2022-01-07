@@ -1136,6 +1136,7 @@ namespace chess::SearchAgents{
         uint64_t mates;
         uint64_t draws;
         uint64_t tableHits;
+        uint64_t research;
 
         //help objects
         std::vector<std::vector<Move>> moves;
@@ -1184,6 +1185,7 @@ namespace chess::SearchAgents{
             this->mates = 0;
             this->draws = 0;
             this->tableHits = 0;
+            this->research = 0;
             this->TTtable.clearCollisions();
 
             //Initialize return value;
@@ -1283,7 +1285,7 @@ namespace chess::SearchAgents{
                     searchValue = pvs<EvalAgent,false>(board, depth, alpha, beta, searchMove);
                 }
 
-                if (limits.exceededTime()) {
+                if (limits.exceededTime() || searchValue == INT_MAX || searchValue == INT_MIN) {
                     // alpha beta search was terminated prematurely => results not complete
                     break;
                 }
@@ -1291,9 +1293,11 @@ namespace chess::SearchAgents{
                 value = searchValue;
                 finalDepth = depth;
                 getPonder(board, ponder);
+                //is_mate = isMate(value);
+                //mate_in = mateIn(depth, value);
 
                 limits.nextItt();
-
+                std::cout << "Research: " << this->research << std::endl;
                 std::cout << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
                 this->logFile << "info depth " << depth << " time " << limits.getElapsed() << " nodes " << this->nodes << " score cp " << value << " pv " << bestMove << " " << ponder << std::endl;
             }
@@ -1327,7 +1331,7 @@ namespace chess::SearchAgents{
         int pvs(ClassicBitBoard& board,int depth, int alpha, int beta, Move& bestMove){
             this->nodes++;
 
-            //if time limis is exceeded cuase the parent node to "CUT".
+            //if time limits is exceeded cuases the parent node to "CUT".
             //return "0" could cause undefined behavior (might be better compared to actual value)
             if (this->limits.exceededTime()) {
                 std::cout << "time exceeded" << std::endl;
@@ -1422,6 +1426,7 @@ namespace chess::SearchAgents{
                         value = zwSearch<EvalAgent,!side>(board, depth - 1, alpha,alpha + 1);
                         if (value > alpha && value < beta) {
                             // research
+                            research++;
                             value = pvs<EvalAgent,!side>(board, depth - 1, alpha, beta, firstMove);
                         }
                     }
@@ -1515,6 +1520,7 @@ namespace chess::SearchAgents{
 
             //if time limit is exceeded cause the parent node to "CUT".
             //return "0" could cause undefined behavior (might be better compared to actual value)
+            //Only check if white's turn :> half the amount of checks (side = template)
             if (this->limits.exceededTime()) return side ? INT_MAX : INT_MIN;
 
             //probe transposition table
@@ -1825,7 +1831,7 @@ namespace chess::SearchAgents{
                     searchValue = pvsRazoring<EvalAgent,false>(board, depth, alpha, beta, searchMove);
                 }
 
-                if (limits.exceededTime()) {
+                if (limits.exceededTime() || searchValue == INT_MAX || searchValue == INT_MIN) {
                     // alpha beta search was terminated prematurely => results not complete
                     break;
                 }
@@ -2050,6 +2056,8 @@ namespace chess::SearchAgents{
         int zwSearch(chess::ClassicBitBoard& board, int depth, int alpha, int beta) {
             nodes++;
             bool isRazoring = false;
+            if (this->limits.exceededTime()) return side ? INT_MAX : INT_MIN;
+
             //Note: probing table is more expansive compared to gain.
             //Perhapse if "eval" becomes more expensive later on probing might become better!
             if (depth <= 0) {
@@ -2061,7 +2069,6 @@ namespace chess::SearchAgents{
 
             //if time limit is exceeded cause the parent node to "CUT".
             //return "0" could cause undefined behavior (might be better compared to actual value)
-            if (this->limits.exceededTime()) return side ? INT_MAX : INT_MIN;
 
             //probe transposition table
             uint64_t key = ClassicBitBoard::HashUtil::createHash(board);

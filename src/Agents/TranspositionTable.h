@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <vector>
+#include <iostream>
 #include "../chess/ClassicBitBoard.h"
 namespace chess{
 	enum class TTtype { PV, CUT, ALL, None};
@@ -36,6 +37,12 @@ namespace chess{
 		
 		
 		__forceinline void update(uint64_t key,uint8_t ID,TTtype type, int eval, int depth, Move& move) {
+		    if (eval == INT_MAX || eval == INT_MIN){
+		        //INT_MAX & INT_MIN => PVSRazor sometimes tries to push this when search is terminated due to time.
+		        //Don't know why but this hopefully solves the problem. (it is stupid but it works)
+		        return;
+		        std::cout << "info wrong update\n";
+		    }
 			uint64_t index = key % this->maxEntries;
 			if (key != TTable[index].hash && TTable[index].hash != 0) {
 				if (ID == TTable[index].ID) {
