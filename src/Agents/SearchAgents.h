@@ -7,6 +7,7 @@
 #include "../UCI/Limits.h"
 #include "../chess/Polyglot.h"
 #include "EvalAgents.h"
+#include "MovePicker.h"
 #pragma once
 namespace chess::SearchAgents{
 	const int draw_value = 0;
@@ -1140,6 +1141,7 @@ namespace chess::SearchAgents{
 
         //help objects
         std::vector<std::vector<Move>> moves;
+        std::vector<std::pair<Move,Move>> killerMoves;
         TTentry entry;
         TranspositionTable TTtable = TranspositionTable(1024);
         std::stringstream logFile;
@@ -1209,6 +1211,7 @@ namespace chess::SearchAgents{
             // 2.Only 1 possible move = make move
             // 3.Mate in 1;
             moves.resize(2);
+            killerMoves.resize(2);
             board.generate_moves(moves[0]);
             //No possible moves
             if (moves[0].empty()) {
@@ -1275,7 +1278,10 @@ namespace chess::SearchAgents{
             int searchValue;
             int finalDepth = 0;
             for (int depth = 1; !limits.exceeded(depth); depth++) {
-                if (depth == moves.size()) moves.resize((size_t)(moves.size() * 1.5) + 1);
+                if (depth == moves.size()) {
+                    moves.resize((size_t)(moves.size() * 1.5) + 1);
+                    killerMoves.resize((size_t)(moves.size() * 1.5) + 1);
+                }
                 this->searchID++;
 
                 int alpha = INT_MIN;
@@ -1416,12 +1422,13 @@ namespace chess::SearchAgents{
             }
 
             //set 'PV move first':
-            if (tablehit) {
+            /*if (tablehit) {
                 board.sort<side>(moves[depth], firstMove);
             }
             else {
                 board.sort<side>(moves[depth]);
-            }
+            }*/
+            MovePicker<side> movePicker = MovePicker<side>(board,moves[depth],killerMoves[depth],tablehit,firstMove);
 
             int in_alpha = alpha;
             int in_beta = beta;
@@ -1431,7 +1438,9 @@ namespace chess::SearchAgents{
                 int bestValue = INT_MIN;
                 int value = INT_MIN;
                 bool bSearchPV = true;
-                for (Move &m : moves[depth]) {
+                //for (Move &m : moves[depth]) {
+                Move m;
+                while(movePicker.nextMove(m)){
                     board.makeMove(m);
                     if (depth <= 1) {
                         value = EvalAgent::template eval<!side>(board);
@@ -1474,13 +1483,20 @@ namespace chess::SearchAgents{
                     //note: 'black to move' = minimizing => lower bound = cut node
                     TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, bestMove);
                 }
+
+                //update killers
+                this->killerMoves[depth].first = this->killerMoves[depth].second;
+                this->killerMoves[depth].second = bestMove;
+
                 return bestValue;
             }
             else{
                 int bestValue = INT_MAX;
                 int value = INT_MAX;
                 bool bSearchPV = true;
-                for (Move &m : moves[depth]) {
+                //for (Move &m : moves[depth]) {
+                Move m;
+                while(movePicker.nextMove(m)){
                     board.makeMove(m);
                     if (depth <= 1) {
                         value = EvalAgent::template eval<!side>(board);
@@ -1521,6 +1537,10 @@ namespace chess::SearchAgents{
                     //note: 'black to move' = minimizing => lower bound = cut node
                     TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, bestMove);
                 }
+
+                //update killers
+                this->killerMoves[depth].first = this->killerMoves[depth].second;
+                this->killerMoves[depth].second = bestMove;
                 return bestValue;
             }
         }
