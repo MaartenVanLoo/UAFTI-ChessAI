@@ -119,6 +119,9 @@ public:
         }
         return false;
     }
+    pickerState getState(){
+        return this->state;
+    }
 private:
     ClassicBitBoard* board;
     pickerState state = transposition;
