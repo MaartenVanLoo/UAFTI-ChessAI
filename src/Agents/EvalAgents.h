@@ -264,7 +264,7 @@ namespace chess {
 				psqt_eg -= Psqt::rook<false>(63 - SquareOf(rook));
 				piece_val_mg -= PieceBonus::rook<true>();
 				piece_val_eg -= PieceBonus::rook<false>();
-				npm -= PieceBonus::rook<true>();
+				npm += PieceBonus::rook<true>();
 			}
 			Bitloop(bishop) {
                 bBishop++;
@@ -273,7 +273,7 @@ namespace chess {
 				psqt_eg -= Psqt::bishop<false>(63 - SquareOf(bishop));
 				piece_val_mg -= PieceBonus::bishop<true>();
 				piece_val_eg -= PieceBonus::bishop<false>();
-				npm -= PieceBonus::bishop<true>();
+				npm += PieceBonus::bishop<true>();
 			}
             if (pieceCount[1][3] >= 2){ //Bishop pair
                 pieceCount[1][0]++;
@@ -287,7 +287,7 @@ namespace chess {
 				psqt_eg -= Psqt::knight<false>(63 - SquareOf(knight));
 				piece_val_mg -= PieceBonus::knight<true>();
 				piece_val_eg -= PieceBonus::knight<false>();
-				npm -= PieceBonus::knight<true>();
+				npm += PieceBonus::knight<true>();
 			}
 			Bitloop(queen){
                 pieceCount[1][5]++;
@@ -295,7 +295,7 @@ namespace chess {
 				psqt_eg -= Psqt::queen<false>(63 - SquareOf(queen));
 				piece_val_mg -= PieceBonus::queen<true>();
 				piece_val_eg -= PieceBonus::queen<false>();
-				npm -= PieceBonus::queen<true>();
+				npm += PieceBonus::queen<true>();
 			}
 			Bitloop(king) {
                 pieceCount[1][6]++;
