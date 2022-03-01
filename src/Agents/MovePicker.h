@@ -11,10 +11,12 @@ using namespace chess;
 
 enum pickerState{
     transposition = 0,
-    killerFirst = 1,
-    killerSecond = 2,
-    capture = 3,
-    other = 4
+    winningCapture = 1,
+    equalCapture = 2,
+    killerFirst = 3,
+    killerSecond = 4,
+    other = 6,
+    capture
 };
 template <bool IsWhite>
 class MovePicker {
@@ -33,7 +35,7 @@ public:
     bool nextMove(Move& move){
         switch(state){
             case transposition: {
-                state = killerFirst;
+                state = winningCapture;
                 if (tableHit) {
                     for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
                         if (*transpositionMove == *it) {
@@ -46,8 +48,32 @@ public:
                 }
                 [[fallthrough]];
             }
+            case winningCapture:{
+                for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
+                    if (board->isWinningCapture<IsWhite>(*it)){
+                        move = *it;
+                        std::swap(*it, moveBuffer->back());
+                        moveBuffer->pop_back();
+                        return true;
+                    }
+                }
+                state = equalCapture;
+                [[fallthrough]];
+            }
+            case equalCapture:{
+                for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
+                    if (board->isEqualCapture<IsWhite>(*it)){
+                        move = *it;
+                        std::swap(*it, moveBuffer->back());
+                        moveBuffer->pop_back();
+                        return true;
+                    }
+                }
+                state = killerFirst;
+                [[fallthrough]];
+            }
             case killerFirst: {
-                state = killerSecond;
+                state = killerSecond; //already change state => only 1 possible hit killer moves
                 for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
                     if (killers->first == *it) {
                         std::swap(*it, moveBuffer->back());
@@ -59,7 +85,7 @@ public:
                 [[fallthrough]];
             }
             case killerSecond: {
-                state = capture;
+                state = other; //already change state => only 1 possible hit for killer moves
                 for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
                     if (killers->second == *it) {
                         std::swap(*it, moveBuffer->back());
@@ -70,18 +96,18 @@ public:
                 }
                 [[fallthrough]];
             }
-            case capture: {
+            /*case capture: {
                 for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
-                    if (it->to & this->board->template Enemy<IsWhite>()) {
+                    if (board->isCapture<IsWhite>(*it)) {
                         move = *it;
                         std::swap(*it, moveBuffer->back());
                         moveBuffer->pop_back();
                         return true;
                     }
                 }
-                state = other;
+                state = killerFirst;
                 [[fallthrough]];
-            }
+            }*/
             case other: {
                 if (moveBuffer->empty()) return false;
                 else {

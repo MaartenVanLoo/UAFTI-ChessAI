@@ -845,6 +845,88 @@ namespace chess {
             if constexpr (IsWhite) return WQueen;
             return BQueen;
         }
+
+        //move properties
+        template<bool IsWhite>
+        __forceinline bool isCapture(const Move &move){
+            return move.to & Enemy<IsWhite>();
+        }
+        template<bool IsWhite>
+        __forceinline bool isWinningCapture(const Move &move){
+            if (!isCapture<IsWhite>(move)) return false;
+            uint8_t piece = getMoveOwnPiece(move.flags);
+            switch (piece) {
+                case BoardPiece::bp_King: return true; //capture something with king = always winning (only possible when not defended)
+                case BoardPiece::bp_Pawn: {
+                    if (move.to & Pawns<!IsWhite>()) return false;// target = pawn = equal capture
+                    else return true;
+                    break;
+                }
+                case BoardPiece::bp_Knight:{
+                    if (move.to & Pawns<!IsWhite>()) return false;// target = pawn = losing capture
+                    if (move.to & Knights<!IsWhite>()) return false;// target = knight = equal capture
+                    else return true;
+                    break;
+                }
+                case BoardPiece::bp_Bishop:{
+                    if (move.to & Pawns<!IsWhite>()) return false;// target = pawn = losing capture
+                    if (move.to & Knights<!IsWhite>()) return false;// target = knight = losing capture
+                    if (move.to & Bishops<!IsWhite>()) return false;// target = bishop = equal capture
+                    else return true;
+                    break;
+                }
+                case BoardPiece::bp_Rook:{
+                    if (move.to & Pawns<!IsWhite>()) return false;// target = pawn = losing capture
+                    if (move.to & Knights<!IsWhite>()) return false;// target = knight = losing capture
+                    if (move.to & Bishops<!IsWhite>()) return false;// target = bishop = losing capture
+                    if (move.to & Rooks<!IsWhite>()) return false;// target = rook = equal capture
+                    else return true;
+                    break;
+                }
+                case BoardPiece::bp_Queen:{
+                    return false; //no possible capture 'better' than a queen (other queen is equal capture!)
+                    break;
+                }
+                default:
+                    return false;
+            }
+            return false;
+        }
+        template<bool IsWhite>
+        __forceinline bool isEqualCapture(const Move &move){
+            if (!isCapture<IsWhite>(move)) return false;
+            uint8_t piece = getMoveOwnPiece(move.flags);
+            switch (piece) {
+                case BoardPiece::bp_King:
+                    return false; //king cannot capture a king
+                case BoardPiece::bp_Pawn: {
+                    if (move.to & Pawns<!IsWhite>()) return true;// target = pawn = equal capture
+                    else return false;
+                    break;
+                }
+                case BoardPiece::bp_Knight:{
+                    return move.to & Knights<!IsWhite>();// target = knight = equal capture
+                    break;
+                }
+                case BoardPiece::bp_Bishop:{
+                    return move.to & Bishops<!IsWhite>();// target = bishop = equal capture
+                    break;
+                }
+                case BoardPiece::bp_Rook:{
+                    return move.to & Rooks<!IsWhite>();// target = rook = equal capture
+                    break;
+                }
+                case BoardPiece::bp_Queen:{
+                    return move.to & Queens<!IsWhite>();// target = queen = equal capture
+                    break;
+                }
+                default:
+                    return false;
+            }
+            return false;
+        }
+        //TODO:add losing capture
+
     protected:
         void parse_fen(std::string);
         map fenToBmp(std::string& FEN, char piece);
@@ -865,7 +947,8 @@ namespace chess {
         constexpr uint64_t Castle_RookswitchL();
         template <bool IsWhite, bool newEP >
         _InlineConstExpr void updateState(const Move &move);
-        
+
+
         //Generate moves
         template<bool IsWhite>
         inline void _generate_capture_moves(std::vector<Move>& moves);

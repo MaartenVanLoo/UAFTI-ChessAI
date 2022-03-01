@@ -1616,21 +1616,24 @@ namespace chess::SearchAgents{
                 threefold++;
                 return draw_value;
             }
+
             //set 'PV move first':
-            if (tablehit) {
+            /*if (tablehit) {
                 board.sort<side>(moves[depth], firstMove);
             }
             else {
                 board.sort<side>(moves[depth]);
-            }
-
+            }*/
+            MovePicker<side> movePicker = MovePicker<side>(board,moves[depth],killerMoves[depth],tablehit,firstMove);
             int in_alpha = alpha;
             int in_beta = beta;
 
             if (side) {
                 int bestValue = INT_MIN;
                 int value = INT_MIN;
-                for (Move& m : moves[depth]) {
+                //for (Move &m : moves[depth]) {
+                Move m;
+                while(movePicker.nextMove(m)){
                     board.makeMove(m);
                     if (depth <= 1) {
                         value = std::max(value, EvalAgent::template eval<!side>(board));
@@ -1662,12 +1665,17 @@ namespace chess::SearchAgents{
                 else if (value <= in_alpha) {
                     TTtable.update(key, this->searchID, TTtype::ALL, bestValue, depth, best);
                 }
+                //update killers
+                this->killerMoves[depth].first = this->killerMoves[depth].second;
+                this->killerMoves[depth].second = best;
                 return bestValue;
             }
             else {
                 int bestValue = INT_MAX;
                 int value = INT_MAX;
-                for (Move& m : moves[depth]) {
+                //for (Move &m : moves[depth]) {
+                Move m;
+                while(movePicker.nextMove(m)){
                     board.makeMove(m); nodes++;
                     if (depth <= 1) {
                         value = std::min(value, EvalAgent::template eval<!side>(board));
@@ -1700,6 +1708,9 @@ namespace chess::SearchAgents{
                     //note: 'black to move' = minimizing => lower bound = cut node
                     TTtable.update(key, this->searchID, TTtype::CUT, bestValue, depth, best);
                 }
+                //update killers
+                this->killerMoves[depth].first = this->killerMoves[depth].second;
+                this->killerMoves[depth].second = best;
                 return bestValue;
             }
         }
