@@ -4,6 +4,7 @@
 cmake_minimum_required (VERSION 3.8)
 
 project ("UAFTI-ChessAI")
+
 set(CMAKE_CXX_STANDARD 20)
 
 link_directories()
@@ -33,6 +34,7 @@ message(${AIlist})
 #			 "ChessAI.cpp")
 
 add_executable (UAFTI-ChessAI "ChessAI.cpp" ${AIlist} ${APP_ICON_RESOURCE_WINDOWS})
+
 set_target_properties(UAFTI-ChessAI PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/bin/$<CONFIG>)
 
 
@@ -49,8 +51,8 @@ if (CMAKE_BUILD_TYPE MATCHES "Release")
 
 
 	#enable profiling option for visual studio
-	SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/PROFILE")
-	SET_TARGET_PROPERTIES(${PROJECT_NAME} PROPERTIES LINK_FLAGS "/DEBUG")
+	SET_TARGET_PROPERTIES(UAFTI-ChessAI PROPERTIES LINK_FLAGS "/PROFILE")
+	SET_TARGET_PROPERTIES(UAFTI-ChessAI PROPERTIES LINK_FLAGS "/DEBUG")
 endif()
 set(MSVC_COMPILE_FLAGS "/MP")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MSVC_COMPILE_FLAGS}" )
@@ -67,4 +69,5 @@ message("Cmake cxx flags debug:${CMAKE_CXX_FLAGS_DEBUG}")
 # TODO: Add tests and install targets if needed.
 #include tests
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test/)
+add_subdirectory(src/GUI)
 
