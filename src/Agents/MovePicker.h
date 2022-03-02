@@ -32,10 +32,10 @@ public:
         this->state =transposition;
     };
 
-    bool nextMove(Move& move){
+    inline bool nextMove(Move& move){
         switch(state){
             case transposition: {
-                state = winningCapture;
+                state = killerFirst;
                 if (tableHit) {
                     for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
                         if (*transpositionMove == *it) {
@@ -48,7 +48,7 @@ public:
                 }
                 [[fallthrough]];
             }
-            case winningCapture:{
+            /*case winningCapture:{
                 for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
                     if (board->isWinningCapture<IsWhite>(*it)){
                         move = *it;
@@ -71,7 +71,7 @@ public:
                 }
                 state = killerFirst;
                 [[fallthrough]];
-            }
+            }*/
             case killerFirst: {
                 state = killerSecond; //already change state => only 1 possible hit killer moves
                 for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
@@ -85,7 +85,7 @@ public:
                 [[fallthrough]];
             }
             case killerSecond: {
-                state = other; //already change state => only 1 possible hit for killer moves
+                state = capture; //already change state => only 1 possible hit for killer moves
                 for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
                     if (killers->second == *it) {
                         std::swap(*it, moveBuffer->back());
@@ -96,7 +96,7 @@ public:
                 }
                 [[fallthrough]];
             }
-            /*case capture: {
+            case capture: {
                 for (auto it = moveBuffer->begin(); it != moveBuffer->end(); it++) {
                     if (board->isCapture<IsWhite>(*it)) {
                         move = *it;
@@ -105,9 +105,9 @@ public:
                         return true;
                     }
                 }
-                state = killerFirst;
+                state = other;
                 [[fallthrough]];
-            }*/
+            }
             case other: {
                 if (moveBuffer->empty()) return false;
                 else {

@@ -253,7 +253,7 @@ namespace chess {
 			king = brd.BKing;
 			Bitloop(pawn) {
                 pieceCount[1][1]++;
-				psqt_mg -= Psqt::pawn<true>(63 - SquareOf(pawn));
+				psqt_mg -= Psqt::pawn<true>(63 - SquareOf(pawn)); //Note: not exacly correct => this = rotation, actually need to flip twice!
 				psqt_eg -= Psqt::pawn<false>(63 - SquareOf(pawn));
 				piece_val_mg -= PieceBonus::pawn<true>();
 				piece_val_eg -= PieceBonus::pawn<false>();
@@ -322,8 +322,9 @@ namespace chess {
 
             //Imbalance //TODO: check if the implementation is correct
             // Source: https://hxim.github.io/Stockfish-Evaluation-Guide/ && https://github.com/official-stockfish/Stockfish/blob/master/src/material.cpp
-            imbalance_total_mg = Imbalance::imbalance<side,true>(pieceCount) - Imbalance::imbalance<!side,true>(pieceCount);
-            imbalance_total_eg = Imbalance::imbalance<side,false>(pieceCount) - Imbalance::imbalance<!side,false>(pieceCount);
+            //note don't use "side" as first parameter => always look from the point of view of the white player.
+            imbalance_total_mg = Imbalance::imbalance<true,true>(pieceCount) - Imbalance::imbalance<false,true>(pieceCount);
+            imbalance_total_eg = Imbalance::imbalance<true,false>(pieceCount) - Imbalance::imbalance<false,false>(pieceCount);
             /*for (int i = 0; i < 2; i++){
                 for (int j = 0; j < 6; j++) {
                     std::cout << pieceCount[i][j] << " ";
@@ -459,8 +460,8 @@ namespace chess {
 					-74,-52,-43,-34,-34,-43,-52,-74}
 			};
 			static inline int king_score[2][64]{
-				{ 271, 327+100, 271, 198, 198, 271+100, 327, 271,
-					278, 303, 234/2, 179/2, 179/2, 234/2, 303, 278,
+				{   271, 327, 271, 198, 198, 271, 327, 271,
+					278, 303, 234, 179, 179, 234, 303, 278,
 					195, 258, 169, 120, 120, 169, 258, 195,
 					164, 190, 138,  98,  98, 138, 190, 164,
 					154, 179, 105,  70,  70, 105, 179, 154,

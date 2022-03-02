@@ -105,7 +105,7 @@ bool chess::Polyglot::getMove(const uint64_t& hash, std::string& move)
 bool chess::Polyglot::getMove(const uint64_t& hash, Move& move, ClassicBitBoard& board) {
 	std::string m;
 	if (getMove(hash, m)) {
-		move = board.LAN2Move(m);
+		move = board.LAN2Move(m); //TODO: IMPORTAND!!!!! fix "castling = e8h8 instead of e8g8 http://hgm.nubati.net/book_format.html
 		return true;
 	}
 	move = Move();
