@@ -1,0 +1,8 @@
+//
+// Created by maart on 28/02/2022.
+//
+
+#ifndef UAFTI_CHESSAI_CHESSGUI_H
+#define UAFTI_CHESSAI_CHESSGUI_H
+
+#endif //UAFTI_CHESSAI_CHESSGUI_H
